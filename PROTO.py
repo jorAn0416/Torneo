@@ -252,7 +252,7 @@ elif rol == "Premiaciones":
 
             col1, col2, col3 = st.columns(3)
 
-            with col1:
+with col1:
     primer = grafica["ganadores"]["primer_lugar"]
     escuela_primer = obtener_escuela(grafica, primer)
 
@@ -272,5 +272,7 @@ with col3:
 
     st.metric("Tercer lugar", tercero)
     st.caption(f"Escuela: {escuela_tercero}")
-            st.divider()
+
+            
+    st.divider()
 
