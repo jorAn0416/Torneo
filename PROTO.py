@@ -18,9 +18,9 @@ if "competidores_temp" not in st.session_state:
     st.session_state.competidores_temp = []
 
 
-
+# =========================
 # FUNCIONES
-
+# =========================
 
 def registrar_competidor(nombre, escuela, modalidad, edad, sexo):
     competidor = {
@@ -71,6 +71,13 @@ def obtener_dataframe_graficas():
         })
 
     return pd.DataFrame(datos)
+
+
+def obtener_escuela(grafica, nombre_competidor):
+    for competidor in grafica["competidores"]:
+        if competidor["nombre"] == nombre_competidor:
+            return competidor["escuela"]
+    return "Sin escuela registrada"
 
 
 # =========================
@@ -227,17 +234,6 @@ elif rol == "Área de competencias":
 
 
 # =========================
-# FUNCIÓN AUXILIAR
-# =========================
-
-def obtener_escuela(grafica, nombre_competidor):
-    for competidor in grafica["competidores"]:
-        if competidor["nombre"] == nombre_competidor:
-            return competidor["escuela"]
-    return "Sin escuela registrada"
-
-
-# =========================
 # ROL: PREMIACIONES
 # =========================
 
@@ -251,11 +247,9 @@ elif rol == "Premiaciones":
     ]
 
     if not graficas_finalizadas:
-
         st.info("Todavía no hay gráficas finalizadas.")
 
     else:
-
         for grafica in graficas_finalizadas:
 
             st.subheader(grafica["nombre_grafica"])
@@ -271,30 +265,24 @@ elif rol == "Premiaciones":
             col1, col2, col3 = st.columns(3)
 
             with col1:
-
                 st.metric(
                     label="Primer lugar",
                     value=primer
                 )
-
                 st.caption(f"Escuela: {escuela_primer}")
 
             with col2:
-
                 st.metric(
                     label="Segundo lugar",
                     value=segundo
                 )
-
                 st.caption(f"Escuela: {escuela_segundo}")
 
             with col3:
-
                 st.metric(
                     label="Tercer lugar",
                     value=tercero
                 )
-
                 st.caption(f"Escuela: {escuela_tercero}")
 
             st.write(f"**Reglamento:** {grafica['reglamento']}")
