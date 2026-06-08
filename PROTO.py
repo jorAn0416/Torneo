@@ -7,7 +7,7 @@ from datetime import datetime
 # =========================
 
 st.set_page_config(
-    page_title="Gestor de Torneos de Karate",
+    page_title="Generador de Graficas",
     layout="wide"
 )
 
@@ -18,9 +18,9 @@ if "competidores_temp" not in st.session_state:
     st.session_state.competidores_temp = []
 
 
-# =========================
+
 # FUNCIONES
-# =========================
+
 
 def registrar_competidor(nombre, escuela, modalidad, edad, sexo):
     competidor = {
