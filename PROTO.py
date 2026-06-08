@@ -247,13 +247,13 @@ elif rol == "Premiaciones":
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                st.metric("Primer lugar", grafica["ganadores"]["primer_lugar"])
+                st.metric("Primer lugar", grafica["ganadores"]["primer_lugar"]["escuela"])
 
             with col2:
-                st.metric("Segundo lugar", grafica["ganadores"]["segundo_lugar"])
+                st.metric("Segundo lugar", grafica["ganadores"]["segundo_lugar"]["escuela"])
 
             with col3:
-                st.metric("Tercer lugar", grafica["ganadores"]["tercer_lugar"])
+                st.metric("Tercer lugar", grafica["ganadores"]["tercer_lugar"]["escuela"])
 
             st.write(f"Reglamento: **{grafica['reglamento']}**")
             st.write(f"Modalidad: **{grafica['modalidad']}**")
