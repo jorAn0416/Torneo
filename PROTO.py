@@ -226,6 +226,14 @@ elif rol == "Área de competencias":
                 st.warning("Debes registrar al menos el primer lugar.")
 
 
+
+
+def obtener_escuela(grafica, nombre_competidor):
+    for competidor in grafica["competidores"]:
+        if competidor["nombre"] == nombre_competidor:
+            return competidor["escuela"]
+    return ""
+
 # =========================
 # ROL: PREMIACIONES
 # =========================
@@ -247,13 +255,25 @@ elif rol == "Premiaciones":
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                st.metric("Primer lugar", grafica["ganadores"]["primer_lugar"])
+            primer = grafica["ganadores"]["primer_lugar"]
+            escuela_primer = obtener_escuela(grafica, primer)
+
+            st.metric("Primer lugar", primer)
+            st.caption(f"Escuela: {escuela_primer}")
 
             with col2:
-                st.metric("Segundo lugar", grafica["ganadores"]["segundo_lugar"])
+            segundo = grafica["ganadores"]["segundo_lugar"]
+            escuela_segundo = obtener_escuela(grafica, segundo)
+
+            st.metric("Segundo lugar", segundo)
+            st.caption(f"Escuela: {escuela_segundo}")
 
             with col3:
-                st.metric("Tercer lugar", grafica["ganadores"]["tercer_lugar"])
+            tercero = grafica["ganadores"]["tercer_lugar"]
+            escuela_tercero = obtener_escuela(grafica, tercero)
+
+            st.metric("Tercer lugar", tercero)
+            st.caption(f"Escuela: {escuela_tercero}")
 
             st.write(f"Reglamento: **{grafica['reglamento']}**")
             st.write(f"Modalidad: **{grafica['modalidad']}**")
