@@ -226,19 +226,23 @@ elif rol == "Área de competencias":
                 st.warning("Debes registrar al menos el primer lugar.")
 
 
-
+# =========================
+# FUNCIÓN AUXILIAR
+# =========================
 
 def obtener_escuela(grafica, nombre_competidor):
     for competidor in grafica["competidores"]:
         if competidor["nombre"] == nombre_competidor:
             return competidor["escuela"]
-    return ""
+    return "Sin escuela registrada"
+
 
 # =========================
 # ROL: PREMIACIONES
 # =========================
 
 elif rol == "Premiaciones":
+
     st.header("Área de premiaciones")
 
     graficas_finalizadas = [
@@ -247,37 +251,55 @@ elif rol == "Premiaciones":
     ]
 
     if not graficas_finalizadas:
+
         st.info("Todavía no hay gráficas finalizadas.")
+
     else:
+
         for grafica in graficas_finalizadas:
+
             st.subheader(grafica["nombre_grafica"])
+
+            primer = grafica["ganadores"]["primer_lugar"]
+            segundo = grafica["ganadores"]["segundo_lugar"]
+            tercero = grafica["ganadores"]["tercer_lugar"]
+
+            escuela_primer = obtener_escuela(grafica, primer)
+            escuela_segundo = obtener_escuela(grafica, segundo)
+            escuela_tercero = obtener_escuela(grafica, tercero)
 
             col1, col2, col3 = st.columns(3)
 
             with col1:
-            primer = grafica["ganadores"]["primer_lugar"]
-            escuela_primer = obtener_escuela(grafica, primer)
 
-            st.metric("Primer lugar", primer)
-            st.caption(f"Escuela: {escuela_primer}")
+                st.metric(
+                    label="Primer lugar",
+                    value=primer
+                )
+
+                st.caption(f"Escuela: {escuela_primer}")
 
             with col2:
-            segundo = grafica["ganadores"]["segundo_lugar"]
-            escuela_segundo = obtener_escuela(grafica, segundo)
 
-            st.metric("Segundo lugar", segundo)
-            st.caption(f"Escuela: {escuela_segundo}")
+                st.metric(
+                    label="Segundo lugar",
+                    value=segundo
+                )
+
+                st.caption(f"Escuela: {escuela_segundo}")
 
             with col3:
-            tercero = grafica["ganadores"]["tercer_lugar"]
-            escuela_tercero = obtener_escuela(grafica, tercero)
 
-            st.metric("Tercer lugar", tercero)
-            st.caption(f"Escuela: {escuela_tercero}")
+                st.metric(
+                    label="Tercer lugar",
+                    value=tercero
+                )
 
-            st.write(f"Reglamento: **{grafica['reglamento']}**")
-            st.write(f"Modalidad: **{grafica['modalidad']}**")
-            st.write(f"Categoría: **{grafica['categoria_edad']}**")
-            st.write(f"Sexo: **{grafica['sexo']}**")
+                st.caption(f"Escuela: {escuela_tercero}")
+
+            st.write(f"**Reglamento:** {grafica['reglamento']}")
+            st.write(f"**Modalidad:** {grafica['modalidad']}")
+            st.write(f"**Categoría:** {grafica['categoria_edad']}")
+            st.write(f"**Sexo:** {grafica['sexo']}")
 
             st.divider()
