@@ -858,10 +858,11 @@ elif rol == "Área de competencias":
 
 
 # =========================
-# PREMIACIONES
+# ROL: PREMIACIONES
 # =========================
 
 elif rol == "Premiaciones":
+
     st.header("Área de premiaciones")
 
     graficas_finalizadas = [
@@ -871,34 +872,42 @@ elif rol == "Premiaciones":
 
     if not graficas_finalizadas:
         st.info("Todavía no hay gráficas finalizadas.")
+
     else:
         for grafica in graficas_finalizadas:
+
             st.subheader(grafica["nombre_grafica"])
 
-            primer = grafica["ganadores"].get("primer_lugar", "")
-            segundo = grafica["ganadores"].get("segundo_lugar", "")
-            tercero = grafica["ganadores"].get("tercer_lugar", "")
+            primer = grafica["ganadores"]["primer_lugar"]
+            segundo = grafica["ganadores"]["segundo_lugar"]
+            tercero = grafica["ganadores"]["tercer_lugar"]
 
-            escuela_primer = obtener_escuela(grafica, primer) if primer else ""
-            escuela_segundo = obtener_escuela(grafica, segundo) if segundo else ""
-            escuela_tercero = obtener_escuela(grafica, tercero) if tercero else ""
+            escuela_primer = obtener_escuela(grafica, primer)
+            escuela_segundo = obtener_escuela(grafica, segundo)
+            escuela_tercero = obtener_escuela(grafica, tercero)
 
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                st.metric("Primer lugar", primer if primer else "Sin registrar")
-                if escuela_primer:
-                    st.caption(f"Escuela: {escuela_primer}")
+                st.metric(
+                    label="Primer lugar",
+                    value=primer
+                )
+                st.caption(f"Escuela: {escuela_primer}")
 
             with col2:
-                st.metric("Segundo lugar", segundo if segundo else "Sin registrar")
-                if escuela_segundo:
-                    st.caption(f"Escuela: {escuela_segundo}")
+                st.metric(
+                    label="Segundo lugar",
+                    value=segundo
+                )
+                st.caption(f"Escuela: {escuela_segundo}")
 
             with col3:
-                st.metric("Tercer lugar", tercero if tercero else "Sin registrar")
-                if escuela_tercero:
-                    st.caption(f"Escuela: {escuela_tercero}")
+                st.metric(
+                    label="Tercer lugar",
+                    value=tercero
+                )
+                st.caption(f"Escuela: {escuela_tercero}")
 
             st.write(f"**Reglamento:** {grafica['reglamento']}")
             st.write(f"**Modalidad:** {grafica['modalidad']}")
