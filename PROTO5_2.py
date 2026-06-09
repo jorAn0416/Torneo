@@ -4,6 +4,8 @@ from datetime import datetime
 import random
 import time
 from streamlit_autorefresh import st_autorefresh
+import json
+from supabase import create_client
 
 
 st.set_page_config(
@@ -16,6 +18,96 @@ if "graficas" not in st.session_state:
 
 if "competidores_temp" not in st.session_state:
     st.session_state.competidores_temp = []
+    
+# =========================
+# BASE DE DATOS SUPABASE
+# =========================
+
+def conectar_supabase():
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    return create_client(url, key)
+
+
+supabase = conectar_supabase()
+
+
+def convertir_grafica_a_fila(grafica):
+    return {
+        "nombre_grafica": grafica["nombre_grafica"],
+        "reglamento": grafica["reglamento"],
+        "modalidad": grafica["modalidad"],
+        "categoria_edad": grafica["categoria_edad"],
+        "sexo": grafica["sexo"],
+        "banderas_kata": grafica["banderas_kata"],
+        "estatus": grafica["estatus"],
+        "ronda_actual": grafica["ronda_actual"],
+        "competidores_json": grafica["competidores"],
+        "encuentros_json": grafica["encuentros"],
+        "historial_json": grafica["historial"],
+        "ganadores_json": grafica["ganadores"],
+        "fecha_creacion": grafica["fecha_creacion"]
+    }
+
+
+def convertir_fila_a_grafica(fila):
+    return {
+        "id": fila["id"],
+        "nombre_grafica": fila["nombre_grafica"],
+        "reglamento": fila["reglamento"],
+        "modalidad": fila["modalidad"],
+        "categoria_edad": fila["categoria_edad"],
+        "sexo": fila["sexo"],
+        "banderas_kata": fila["banderas_kata"],
+        "estatus": fila["estatus"],
+        "ronda_actual": fila["ronda_actual"],
+        "competidores": fila["competidores_json"] or [],
+        "encuentros": fila["encuentros_json"] or [],
+        "historial": fila["historial_json"] or [],
+        "ganadores": fila["ganadores_json"] or {
+            "primer_lugar": "",
+            "segundo_lugar": "",
+            "tercer_lugar": ""
+        },
+        "fecha_creacion": fila["fecha_creacion"]
+    }
+
+
+def cargar_graficas_db():
+    respuesta = (
+        supabase
+        .table("graficas")
+        .select("*")
+        .order("id", desc=False)
+        .execute()
+    )
+
+    return [convertir_fila_a_grafica(fila) for fila in respuesta.data]
+
+
+def guardar_grafica_db(grafica):
+    fila = convertir_grafica_a_fila(grafica)
+
+    respuesta = (
+        supabase
+        .table("graficas")
+        .insert(fila)
+        .execute()
+    )
+
+    return respuesta.data[0]["id"]
+
+
+def actualizar_grafica_db(grafica):
+    fila = convertir_grafica_a_fila(grafica)
+
+    (
+        supabase
+        .table("graficas")
+        .update(fila)
+        .eq("id", grafica["id"])
+        .execute()
+    )
 
 
 # =========================
@@ -76,7 +168,7 @@ def crear_grafica(nombre_grafica, reglamento, modalidad, categoria_edad, sexo, b
     competidores = st.session_state.competidores_temp.copy()
 
     nueva_grafica = {
-        "id": len(st.session_state.graficas) + 1,
+        "id": None,
         "nombre_grafica": nombre_grafica,
         "reglamento": reglamento,
         "modalidad": modalidad,
@@ -96,7 +188,9 @@ def crear_grafica(nombre_grafica, reglamento, modalidad, categoria_edad, sexo, b
         "fecha_creacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
 
-    st.session_state.graficas.append(nueva_grafica)
+    nuevo_id = guardar_grafica_db(nueva_grafica)
+    nueva_grafica["id"] = nuevo_id
+
     st.session_state.competidores_temp = []
 
 
@@ -635,6 +729,7 @@ def tablero_kumite(grafica, encuentro, indice):
 
         st.success("Resultado registrado.")
         avanzar_ronda_si_corresponde(grafica)
+        actualizar_grafica_db(grafica)#ACTUALIZA BASE DE DATOS
         st.rerun()
 
 
@@ -770,6 +865,7 @@ def tablero_kata(grafica, encuentro, indice):
 
             st.success("Resultado de kata registrado.")
             avanzar_ronda_si_corresponde(grafica)
+            actualizar_grafica_db(grafica)#ACTUALIZA BASE DE DATOS
             st.rerun()
         else:
             st.warning("Debes registrar exactamente todas las banderas y debe existir un ganador.")
@@ -778,7 +874,7 @@ def tablero_kata(grafica, encuentro, indice):
 # =========================
 # INTERFAZ PRINCIPAL
 # =========================
-
+st.session_state.graficas = cargar_graficas_db()
 st.title("Sistema de Organización de Gráficas - Karate")
 
 rol = st.sidebar.selectbox(
@@ -880,6 +976,8 @@ if rol == "Registro":
 # =========================
 
 elif rol == "Área de competencias":
+    st_autorefresh(interval=3000, key="refresh_general")
+    
     st.header("Área de competencias")
 
     graficas_activas = [
@@ -899,6 +997,8 @@ elif rol == "Área de competencias":
         grafica = opciones[seleccion]
 
         grafica["estatus"] = "En desarrollo"
+        
+        actualizar_grafica_db(grafica)#ACTUALIZA BASE DE DATOS
 
         st.subheader(grafica["nombre_grafica"])
 
@@ -952,6 +1052,8 @@ elif rol == "Área de competencias":
 # =========================
 
 elif rol == "Premiaciones":
+    st_autorefresh(interval=3000, key="refresh_general")
+    
     st.header("Área de premiaciones")
 
     graficas_finalizadas = [
@@ -992,17 +1094,3 @@ elif rol == "Premiaciones":
             st.write(f"**Modalidad:** {grafica['modalidad']}")
             st.write(f"**Categoría:** {grafica['categoria_edad']}")
             st.write(f"**Sexo:** {grafica['sexo']}")
-
-
-
-
-
-from supabase import create_client
-import streamlit as st
-
-url = st.secrets["SUPABASE_URL"]
-key = st.secrets["SUPABASE_KEY"]
-
-supabase = create_client(url, key)
-
-st.write("Conectado correctamente")
