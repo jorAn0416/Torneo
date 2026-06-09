@@ -992,3 +992,17 @@ elif rol == "Premiaciones":
             st.write(f"**Modalidad:** {grafica['modalidad']}")
             st.write(f"**Categoría:** {grafica['categoria_edad']}")
             st.write(f"**Sexo:** {grafica['sexo']}")
+
+
+
+
+
+from supabase import create_client
+import streamlit as st
+
+url = st.secrets["SUPABASE_URL"]
+key = st.secrets["SUPABASE_KEY"]
+
+supabase = create_client(url, key)
+
+st.write("Conectado correctamente")
