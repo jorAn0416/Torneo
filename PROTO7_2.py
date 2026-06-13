@@ -397,6 +397,113 @@ def cargar_como_plantilla(grafica):
 
 #################################
 
+################################
+def guardar_resultados_finales(grafica):
+
+    premiados = [
+
+        (
+            grafica["ganadores"]["primer_lugar"],
+            1,
+            3
+        ),
+
+        (
+            grafica["ganadores"]["segundo_lugar"],
+            2,
+            2
+        ),
+
+        (
+            grafica["ganadores"]["tercer_lugar"],
+            3,
+            1
+        )
+
+    ]
+
+    for nombre, lugar, puntos in premiados:
+
+        if not nombre:
+            continue
+
+        escuela = obtener_escuela(
+            grafica,
+            nombre
+        )
+
+        supabase.table(
+            "resultados_finales"
+        ).insert({
+
+            "competidor": nombre,
+            "escuela": escuela,
+            "lugar": lugar,
+            "grafica": grafica["nombre_grafica"],
+            "reglamento": grafica["reglamento"],
+            "modalidad": grafica["modalidad"],
+            "categoria": grafica["categoria_edad"]
+
+        }).execute()
+
+        actualizar_puntos_escuela(
+            escuela,
+            puntos
+        )
+################################
+
+####################################
+def actualizar_puntos_escuela(
+    escuela,
+    puntos
+):
+
+    existente = (
+        supabase
+        .table("puntos_escuelas")
+        .select("*")
+        .eq("escuela", escuela)
+        .execute()
+    )
+
+    if existente.data:
+
+        actual = existente.data[0]["puntos"]
+
+        (
+            supabase
+            .table("puntos_escuelas")
+            .update({
+                "puntos": actual + puntos
+            })
+            .eq("escuela", escuela)
+            .execute()
+        )
+
+    else:
+
+        (
+            supabase
+            .table("puntos_escuelas")
+            .insert({
+                "escuela": escuela,
+                "puntos": puntos
+            })
+            .execute()
+        )
+####################################
+
+####################################
+def eliminar_grafica(id_grafica):
+
+    (
+        supabase
+        .table("graficas")
+        .delete()
+        .eq("id", id_grafica)
+        .execute()
+    )
+####################################
 
 # =========================
 # INTERFAZ PRINCIPAL
@@ -408,7 +515,8 @@ rol = st.sidebar.selectbox(
     "Selecciona el tipo de usuario",
     [
         "Registro",
-        "Premiaciones"
+        "Premiaciones",
+        "Resultados Finales"
     ]
 )
 
@@ -715,3 +823,74 @@ elif rol == "Premiaciones":
             st.write(f"**Modalidad:** {grafica['modalidad']}")
             st.write(f"**Categoría:** {grafica['categoria_edad']}")
             st.write(f"**Sexo:** {grafica['sexo']}")
+    
+    if st.button(
+        f"Premiación entregada - {grafica['id']}"
+    ):
+    
+        guardar_resultados_finales(
+            grafica
+        )
+    
+        eliminar_grafica(
+            grafica["id"]
+        )
+    
+        st.success(
+            "Resultados enviados al historial."
+        )
+    
+        st.rerun()
+        
+#####Resultados Finales#########
+    
+elif rol == "Resultados Finales":
+
+    st.header(
+        "Resultados Finales"
+    )
+
+    resultados = (
+        supabase
+        .table("resultados_finales")
+        .select("*")
+        .execute()
+    )
+
+    escuelas = (
+        supabase
+        .table("puntos_escuelas")
+        .select("*")
+        .execute()
+    )
+
+    st.subheader(
+        "Medallistas"
+    )
+
+    st.dataframe(
+        pd.DataFrame(
+            resultados.data
+        ),
+        use_container_width=True
+    )
+
+    st.subheader(
+        "Ranking de Escuelas"
+    )
+
+    ranking = pd.DataFrame(
+        escuelas.data
+    )
+
+    if not ranking.empty:
+
+        ranking = ranking.sort_values(
+            "puntos",
+            ascending=False
+        )
+
+    st.dataframe(
+        ranking,
+        use_container_width=True
+    )
