@@ -2,9 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import random
-import time
 from streamlit_autorefresh import st_autorefresh
-import json
 from supabase import create_client
 
 
@@ -39,7 +37,6 @@ def convertir_grafica_a_fila(grafica):
         "modalidad": grafica["modalidad"],
         "categoria_edad": grafica["categoria_edad"],
         "sexo": grafica["sexo"],
-        "banderas_kata": grafica["banderas_kata"],
         "estatus": grafica["estatus"],
         "ronda_actual": grafica["ronda_actual"],
         "competidores_json": grafica["competidores"],
@@ -100,7 +97,6 @@ def convertir_fila_a_grafica(fila):
         "modalidad": fila["modalidad"],
         "categoria_edad": fila["categoria_edad"],
         "sexo": fila["sexo"],
-        "banderas_kata": fila["banderas_kata"],
         "estatus": fila["estatus"],
         "ronda_actual": fila["ronda_actual"],
         "competidores": fila["competidores_json"] or [],
@@ -287,7 +283,7 @@ def crear_encuentros(competidores):
     return encuentros
 
 
-def crear_grafica(nombre_grafica, reglamento, modalidad, categoria_edad, sexo, banderas_kata):
+def crear_grafica(nombre_grafica, reglamento, modalidad, categoria_edad, sexo):
     competidores = st.session_state.competidores_temp.copy()
 
     nueva_grafica = {
@@ -297,7 +293,6 @@ def crear_grafica(nombre_grafica, reglamento, modalidad, categoria_edad, sexo, b
         "modalidad": modalidad,
         "categoria_edad": categoria_edad,
         "sexo": sexo,
-        "banderas_kata": banderas_kata,
         "competidores": competidores,
         "estatus": "Pendiente",
         "ronda_actual": 1,
@@ -373,6 +368,34 @@ def avanzar_ronda_si_corresponde(grafica):
         grafica["ronda_actual"] += 1
         grafica["encuentros"] = crear_encuentros(ganadores)
 
+#################################
+def cargar_como_plantilla(grafica):
+
+    st.session_state.competidores_temp = (
+        grafica["competidores"].copy()
+    )
+
+    st.session_state.plantilla_nombre = (
+        grafica["nombre_grafica"] + "_COPIA"
+    )
+
+    st.session_state.plantilla_reglamento = (
+        grafica["reglamento"]
+    )
+
+    st.session_state.plantilla_modalidad = (
+        grafica["modalidad"]
+    )
+
+    st.session_state.plantilla_categoria = (
+        grafica["categoria_edad"]
+    )
+
+    st.session_state.plantilla_sexo = (
+        grafica["sexo"]
+    )
+
+#################################
 
 
 # =========================
@@ -400,22 +423,58 @@ if rol == "Registro":
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        nombre_grafica = st.text_input("Nombre de la gráfica", placeholder="Ejemplo: Grafica1")
-        reglamento = st.selectbox("Reglamento", ["WUKF", "WKF"])
+
+        nombre_grafica = st.text_input(
+            "Nombre de la gráfica",
+            value=st.session_state.get(
+                "plantilla_nombre",
+                ""
+            )
+        )
+    
+        reglamento = st.selectbox(
+            "Reglamento",
+            ["WUKF", "WKF"],
+            index=0 if st.session_state.get(
+                "plantilla_reglamento",
+                "WUKF"
+            ) == "WUKF" else 1
+        )
 
     with col2:
-        modalidad = st.selectbox("Modalidad", ["Kata", "Kumite"])
-        sexo = st.selectbox("Sexo", ["Masculino", "Femenino", "Mixto"])
+
+        modalidad = st.selectbox(
+            "Modalidad",
+            ["Kata", "Kumite"],
+            index=0 if st.session_state.get(
+                "plantilla_modalidad",
+                "Kata"
+            ) == "Kata" else 1
+        )
+    
+        sexo = st.selectbox(
+            "Sexo",
+            ["Masculino", "Femenino", "Mixto"],
+            index=[
+                "Masculino",
+                "Femenino",
+                "Mixto"
+            ].index(
+                st.session_state.get(
+                    "plantilla_sexo",
+                    "Masculino"
+                )
+            )
+        )
 
     with col3:
         categoria_edad = st.text_input(
-            "Categoría de edad",
+        "Categoría de edad",
+        value=st.session_state.get(
+            "plantilla_categoria",
+            ""
         )
-
-        if modalidad == "Kata":
-            banderas_kata = st.selectbox("Número de banderas", [3, 5])
-        else:
-            banderas_kata = None
+    )
 
     st.divider()
 
@@ -474,21 +533,72 @@ if rol == "Registro":
 
     if st.button("Crear gráfica"):
         if nombre_grafica and categoria_edad and len(st.session_state.competidores_temp) > 0:
+    
             crear_grafica(
                 nombre_grafica,
                 reglamento,
                 modalidad,
                 categoria_edad,
-                sexo,
-                banderas_kata
+                sexo
             )
-            st.success(f"La gráfica {nombre_grafica} fue creada con estatus Pendiente.")
+    
+            # LIMPIAR DATOS DE LA PLANTILLA
+            for clave in [
+                "plantilla_nombre",
+                "plantilla_reglamento",
+                "plantilla_modalidad",
+                "plantilla_categoria",
+                "plantilla_sexo",
+            ]:
+                if clave in st.session_state:
+                    del st.session_state[clave]
+    
+            st.success(
+                f"La gráfica {nombre_grafica} fue creada con estatus Pendiente."
+            )
+    
+            st.rerun()
+    
         else:
-            st.warning("Falta nombre de gráfica, categoría de edad o competidores.")
+            st.warning(
+                "Falta nombre de gráfica, categoría de edad o competidores."
+            )
 
     st.divider()
 
     st.subheader("Lista general de gráficas")
+    
+    ##################
+    st.divider()
+
+    st.subheader(
+        "Usar gráfica existente como plantilla"
+    )
+    
+    if st.session_state.graficas:
+    
+        opciones = {
+            f'{g["id"]} - {g["nombre_grafica"]}': g
+            for g in st.session_state.graficas
+        }
+    
+        seleccion = st.selectbox(
+            "Selecciona gráfica",
+            list(opciones.keys())
+        )
+    
+        if st.button("Cargar plantilla"):
+    
+            cargar_como_plantilla(
+                opciones[seleccion]
+            )
+    
+            st.success(
+                "Plantilla cargada."
+            )
+    
+            st.rerun()
+    ##################
 
     if st.session_state.graficas:
         st.dataframe(obtener_dataframe_graficas(), use_container_width=True)
