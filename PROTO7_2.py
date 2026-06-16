@@ -824,23 +824,23 @@ elif rol == "Premiaciones":
             st.write(f"**Categoría:** {grafica['categoria_edad']}")
             st.write(f"**Sexo:** {grafica['sexo']}")
     
-    if st.button(
-        f"Premiación entregada - {grafica['id']}"
-    ):
-    
-        guardar_resultados_finales(
-            grafica
-        )
-    
-        eliminar_grafica(
-            grafica["id"]
-        )
-    
-        st.success(
-            "Resultados enviados al historial."
-        )
-    
-        st.rerun()
+            if st.button(
+                f"Premiación entregada - {grafica['id']}"
+            ):
+            
+                guardar_resultados_finales(
+                    grafica
+                )
+            
+                eliminar_grafica(
+                    grafica["id"]
+                )
+            
+                st.success(
+                    "Resultados enviados al historial."
+                )
+            
+                st.rerun()
         
 #####Resultados Finales#########
     
