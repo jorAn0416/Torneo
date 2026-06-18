@@ -505,6 +505,34 @@ def eliminar_grafica(id_grafica):
     )
 ####################################
 
+####################################
+def finalizar_torneo():
+
+    (
+        supabase
+        .table("resultados_finales")
+        .delete()
+        .neq("id", 0)
+        .execute()
+    )
+
+    (
+        supabase
+        .table("puntos_escuelas")
+        .delete()
+        .neq("id", 0)
+        .execute()
+    )
+
+    (
+        supabase
+        .table("graficas")
+        .delete()
+        .neq("id", 0)
+        .execute()
+    )
+####################################
+
 # =========================
 # INTERFAZ PRINCIPAL
 # =========================
@@ -516,7 +544,8 @@ rol = st.sidebar.selectbox(
     [
         "Registro",
         "Premiaciones",
-        "Resultados Finales"
+        "Resultados Finales",
+        "Finalizar Torneo"
     ]
 )
 
@@ -894,3 +923,32 @@ elif rol == "Resultados Finales":
         ranking,
         use_container_width=True
     )
+
+
+#############Finalizat torneo##################
+elif rol == "Finalizar Torneo":
+
+    st.header("Finalizar Torneo")
+
+    st.warning(
+        "Esta acción eliminará TODOS los resultados "
+        "finales y TODOS los puntos acumulados por escuelas."
+    )
+
+    confirmar = st.checkbox(
+        "Entiendo que esta acción no se puede deshacer"
+    )
+
+    if confirmar:
+
+        if st.button(
+            "BORRAR RESULTADOS DEL TORNEO"
+        ):
+
+            finalizar_torneo()
+
+            st.success(
+                "El torneo fue reiniciado correctamente."
+            )
+
+            st.rerun()
