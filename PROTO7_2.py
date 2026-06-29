@@ -218,7 +218,6 @@ def crear_encuentros(competidores):
 
         encuentros.append({
 
-            "tipo":"preliminar",
             "ronda": 0,
             "nombre_ronda": "Preliminar",
 
@@ -241,7 +240,6 @@ def crear_encuentros(competidores):
 
         encuentros.append({
 
-            "tipo":"normal",
             "ronda": 1,
             "nombre_ronda": "Primera ronda",
 
