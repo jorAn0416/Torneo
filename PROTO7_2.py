@@ -380,7 +380,6 @@ def obtener_dataframe_graficas():
             "Sexo": grafica["sexo"],
             "Competidores": len(grafica["competidores"]),
             "Ronda": grafica["ronda_actual"],
-            "area": grafica["area"],
             "tipo_competencia": grafica["tipo_competencia"],
             "Estatus": grafica["estatus"]
         })
@@ -449,9 +448,6 @@ def cargar_como_plantilla(grafica):
 
     st.session_state.plantilla_sexo = (
         grafica["sexo"]
-    )
-    st.session_state.plantilla_sexo = (
-        grafica["area"]
     )
     st.session_state.plantilla_sexo = (
         grafica["tipo_competencia"]
