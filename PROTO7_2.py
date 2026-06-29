@@ -448,9 +448,6 @@ def cargar_como_plantilla(grafica):
     st.session_state.plantilla_sexo = (
         grafica["sexo"]
     )
-    st.session_state.plantilla_sexo = (
-        grafica["tipo_competencia"]
-    )
 
 #################################
 
