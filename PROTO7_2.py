@@ -380,7 +380,6 @@ def obtener_dataframe_graficas():
             "Sexo": grafica["sexo"],
             "Competidores": len(grafica["competidores"]),
             "Ronda": grafica["ronda_actual"],
-            "tipo_competencia": grafica["tipo_competencia"],
             "Estatus": grafica["estatus"]
         })
 
