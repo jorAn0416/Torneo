@@ -37,6 +37,8 @@ def convertir_grafica_a_fila(grafica):
         "modalidad": grafica["modalidad"],
         "categoria_edad": grafica["categoria_edad"],
         "sexo": grafica["sexo"],
+        "area": grafica["area"],
+        "tipo_competencia": tipo_competencia,
         "estatus": grafica["estatus"],
         "ronda_actual": grafica["ronda_actual"],
         "competidores_json": grafica["competidores"],
@@ -62,7 +64,8 @@ def copiar_grafica_db(grafica_original, nuevo_nombre):
     nueva["ganadores"] = {
         "primer_lugar": "",
         "segundo_lugar": "",
-        "tercer_lugar": ""
+        "tercero_1": "",
+        "tercero_2": ""
     }
 
     nueva["encuentros"] = crear_encuentros(
@@ -105,7 +108,8 @@ def convertir_fila_a_grafica(fila):
         "ganadores": fila["ganadores_json"] or {
             "primer_lugar": "",
             "segundo_lugar": "",
-            "tercer_lugar": ""
+            "tercero_1": "",
+            "tercero_2": ""
         },
         "fecha_creacion": fila["fecha_creacion"]
     }
@@ -158,78 +162,93 @@ def calcular_premiacion(grafica):
         r for r in historial
         if r["ronda"] == ultima_ronda
     ][-1]
+    
+    semifinal = ultima_ronda - 1
+
+    perdedores_semifinal = [
+        r["perdedor"]
+        for r in historial
+        if r["ronda"] == semifinal
+    ]
 
     primer = final.get("ganador", "")
     segundo = final.get("perdedor", "")
-
-    excluidos = [primer, segundo]
-
-    acumulados = {}
-
-    for competidor in grafica["competidores"]:
-        acumulados[competidor["nombre"]] = {
-            "banderas": 0,
-            "puntos": 0,
-            "faltas": 0
-        }
-
-    for r in historial:
-        c1 = r.get("competidor_1")
-        c2 = r.get("competidor_2")
-
-        if c1 and c1 not in acumulados:
-            acumulados[c1] = {"banderas": 0, "puntos": 0, "faltas": 0}
-
-        if c2 and c2 not in acumulados:
-            acumulados[c2] = {"banderas": 0, "puntos": 0, "faltas": 0}
-
-        if grafica["modalidad"] == "Kata":
-            if c1:
-                acumulados[c1]["banderas"] += r.get("banderas_rojo", 0)
-
-            if c2:
-                acumulados[c2]["banderas"] += r.get("banderas_azul", 0)
-                acumulados[c2]["banderas"] += r.get("banderas_blanco", 0)
-
-        elif grafica["modalidad"] == "Kumite":
-            if c1:
-                acumulados[c1]["puntos"] += r.get("puntos_1", 0)
-                acumulados[c1]["faltas"] += r.get("faltas_1", 0)
-
-            if c2:
-                acumulados[c2]["puntos"] += r.get("puntos_2", 0)
-                acumulados[c2]["faltas"] += r.get("faltas_2", 0)
-
-    candidatos_tercero = {
-        nombre: datos
-        for nombre, datos in acumulados.items()
-        if nombre not in excluidos
-    }
-    
-    tercero = ""
-
-    if candidatos_tercero:
-        if grafica["modalidad"] == "Kata":
-            tercero = max(
-                candidatos_tercero,
-                key=lambda nombre: candidatos_tercero[nombre]["banderas"]
-            )
-
-        elif grafica["modalidad"] == "Kumite":
-            tercero = sorted(
-                candidatos_tercero,
-                key=lambda nombre: (
-                    -candidatos_tercero[nombre]["puntos"],
-                    candidatos_tercero[nombre]["faltas"]
-                )
-            )[0]
+    tercero_1 = perdedores_semifinal[0] if len(perdedores_semifinal) > 0 else ""
+    tercero_2 = perdedores_semifinal[1] if len(perdedores_semifinal) > 1 else ""
 
     grafica["ganadores"]["primer_lugar"] = primer
     grafica["ganadores"]["segundo_lugar"] = segundo
-    grafica["ganadores"]["tercer_lugar"] = tercero
+    grafica["ganadores"]["tercero_1"] = tercero_1
+    grafica["ganadores"]["tercero_2"] = tercero_2
 
-    return primer, segundo, tercero
 
+    return primer, segundo, tercero_1, tercero_2
+
+def calcular_tabla_round_robin(grafica):
+
+    tabla = {}
+
+    # Inicializar estadísticas
+    for competidor in grafica["competidores"]:
+
+        tabla[competidor["nombre"]] = {
+            "victorias": 0,
+            "puntos": 0,
+            "banderas": 0,
+            "faltas": 0
+        }
+
+    # Recorrer encuentros
+    for encuentro in grafica["encuentros"]:
+
+        if not encuentro["finalizado"]:
+            continue        
+        
+        # actualizar estadísticas
+        if modalidad == "Kumite":
+            ranking=sorted(
+            tabla.items(),
+            
+            key=lambda x:(
+            
+            -x[1]["victorias"],
+            
+            -x[1]["puntos"],
+            
+            x[1]["faltas"]
+            
+            )
+            
+            )
+        if modalidad == "Kata":
+            ranking=sorted(
+
+            tabla.items(),
+            
+            key=lambda x:(
+            
+            -x[1]["victorias"],
+            
+            -x[1]["banderas"]
+            
+            )
+            
+            )
+    return tabla
+
+def calcular_premiacion_round_robin(grafica):
+
+    ranking=calcular_tabla_round_robin(grafica)
+
+    grafica["ganadores"]={
+
+        "primer_lugar":ranking[0][0],
+
+        "segundo_lugar":ranking[1][0],
+
+        "tercer_lugar":ranking[2][0]
+
+    }
 
 
 # =========================
@@ -282,9 +301,42 @@ def crear_encuentros(competidores):
 
     return encuentros
 
+def crear_round_robin(competidores):
+
+    lista = competidores.copy()
+    random.shuffle(lista)
+
+    encuentros = []
+
+    for i in range(len(lista)):
+        for j in range(i + 1, len(lista)):
+
+            encuentros.append({
+                "competidor_1": lista[i],
+                "competidor_2": lista[j],
+                "resultado": None,
+                "ganador": None,
+                "perdedor": None,
+                "finalizado": False
+            })
+
+    return encuentros
+
 
 def crear_grafica(nombre_grafica, reglamento, modalidad, categoria_edad, sexo):
     competidores = st.session_state.competidores_temp.copy()
+    
+    if tipo_competencia == "Round Robin" and len(competidores) != 3:
+        st.error("Round Robin solo está disponible para categorías con exactamente 3 competidores.")
+        return
+    
+    if tipo_competencia == "Round Robin":
+        encuentros = crear_round_robin(competidores)
+    else:
+        encuentros = crear_encuentros(competidores)
+        
+    
+    
 
     nueva_grafica = {
         "id": None,
@@ -294,9 +346,11 @@ def crear_grafica(nombre_grafica, reglamento, modalidad, categoria_edad, sexo):
         "categoria_edad": categoria_edad,
         "sexo": sexo,
         "competidores": competidores,
-        "estatus": "Pendiente",
+        "estatus": "Listo para competir",
+        "area": area,
+        "tipo_competencia": tipo_competencia,
         "ronda_actual": 1,
-        "encuentros": crear_encuentros(competidores),
+        "encuentros": encuentros,
         "historial": [],
         "ganadores": {
             "primer_lugar": "",
@@ -326,6 +380,8 @@ def obtener_dataframe_graficas():
             "Sexo": grafica["sexo"],
             "Competidores": len(grafica["competidores"]),
             "Ronda": grafica["ronda_actual"],
+            "area": grafica["area"],
+            "tipo_competencia": grafica["tipo_competencia"],
             "Estatus": grafica["estatus"]
         })
 
@@ -394,31 +450,25 @@ def cargar_como_plantilla(grafica):
     st.session_state.plantilla_sexo = (
         grafica["sexo"]
     )
+    st.session_state.plantilla_sexo = (
+        grafica["area"]
+    )
+    st.session_state.plantilla_sexo = (
+        grafica["tipo_competencia"]
+    )
 
 #################################
 
 ################################
 def guardar_resultados_finales(grafica):
 
-    premiados = [
+    premiados = [(grafica["ganadores"]["primer_lugar"],1,3),
 
-        (
-            grafica["ganadores"]["primer_lugar"],
-            1,
-            3
-        ),
+                 (grafica["ganadores"]["segundo_lugar"],2,2),
+                 
+                 (grafica["ganadores"]["tercero_1"],3,1),
 
-        (
-            grafica["ganadores"]["segundo_lugar"],
-            2,
-            2
-        ),
-
-        (
-            grafica["ganadores"]["tercer_lugar"],
-            3,
-            1
-        )
+                 (grafica["ganadores"]["tercero_2"],3,1)
 
     ]
 
@@ -442,7 +492,9 @@ def guardar_resultados_finales(grafica):
             "grafica": grafica["nombre_grafica"],
             "reglamento": grafica["reglamento"],
             "modalidad": grafica["modalidad"],
-            "categoria": grafica["categoria_edad"]
+            "categoria": grafica["categoria_edad"],
+            "area": grafica["area"],
+            "tipo_competencia": grafica["tipo_competencia"]
 
         }).execute()
 
@@ -557,9 +609,18 @@ rol = st.sidebar.selectbox(
 if rol == "Registro":
     st.header("Registro de competidores y creación de gráfica")
 
-    col1, col2, col3 = st.columns(3)
-
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
     with col1:
+        tipo_competencia = st.selectbox(
+        "Sistema de competencia",
+        [
+            "Eliminación directa",
+            "Round Robin"
+        ]
+    )
+
+    with col2:
 
         nombre_grafica = st.text_input(
             "Nombre de la gráfica",
@@ -578,7 +639,7 @@ if rol == "Registro":
             ) == "WUKF" else 1
         )
 
-    with col2:
+    with col3:
 
         modalidad = st.selectbox(
             "Modalidad",
@@ -591,26 +652,41 @@ if rol == "Registro":
     
         sexo = st.selectbox(
             "Sexo",
-            ["Masculino", "Femenino", "Mixto"],
+            ["Varonil", "Femenil", "Mixto"],
             index=[
-                "Masculino",
-                "Femenino",
+                "Varonil",
+                "Femenil",
                 "Mixto"
             ].index(
                 st.session_state.get(
                     "plantilla_sexo",
-                    "Masculino"
+                    "Varonil"
                 )
             )
         )
 
-    with col3:
+    with col4:
         categoria_edad = st.text_input(
         "Categoría de edad",
         value=st.session_state.get(
             "plantilla_categoria",
             ""
         )
+    )
+    
+    with col5:
+            area = st.selectbox(
+        "Área",
+        [
+            "Área 1",
+            "Área 2",
+            "Área 3",
+            "Área 4",
+            "Área 5",
+            "Área 6",
+            "Área 7",
+            "Área 8"
+        ]
     )
 
     st.divider()
@@ -705,7 +781,7 @@ if rol == "Registro":
 
     st.subheader("Lista general de gráficas")
     
-    ##################
+    ##################Grafica plantilla
     st.divider()
 
     st.subheader(
@@ -742,38 +818,6 @@ if rol == "Registro":
     else:
         st.info("Aún no hay gráficas creadas.")
         
-    #################################Copiadora
-    st.subheader("Copiar gráfica")
-
-    if st.session_state.graficas:
-    
-        opciones = {
-            g["nombre_grafica"]: g
-            for g in st.session_state.graficas
-        }
-    
-        seleccion = st.selectbox(
-            "Selecciona gráfica",
-            list(opciones.keys())
-        )
-    
-        nuevo_nombre = st.text_input(
-            "Nombre de la copia"
-        )
-    
-        if st.button("Copiar gráfica"):
-    
-            copiar_grafica_db(
-                opciones[seleccion],
-                nuevo_nombre
-            )
-    
-            st.success(
-                "Gráfica copiada"
-            )
-
-            st.rerun()
-    #################################
     
     #################################ElininarGraficas
     st.subheader("Eliminar gráfica")
@@ -825,13 +869,16 @@ elif rol == "Premiaciones":
         for grafica in graficas_finalizadas:
             st.subheader(grafica["nombre_grafica"])
 
-            primer, segundo, tercero = calcular_premiacion(grafica)
+            primer, segundo, tercero_1, tercero_2 = calcular_premiacion(grafica)
 
             escuela_primer = obtener_escuela(grafica, primer) if primer else ""
             escuela_segundo = obtener_escuela(grafica, segundo) if segundo else ""
-            escuela_tercero = obtener_escuela(grafica, tercero) if tercero else ""
+            escuela_tercero1 = obtener_escuela(grafica, tercero_1) if tercero_1 else ""
+            escuela_tercero2 = obtener_escuela(grafica, tercero_2) if tercero_2 else ""
 
-            col1, col2, col3 = st.columns(3)
+            col1, col2 = st.columns(2)
+            col3, col4 = st.columns(2)
+
 
             with col1:
                 st.metric("Primer lugar", primer if primer else "No definido")
@@ -844,14 +891,36 @@ elif rol == "Premiaciones":
                     st.caption(f"Escuela: {escuela_segundo}")
 
             with col3:
-                st.metric("Tercer lugar", tercero if tercero else "No definido")
-                if escuela_tercero:
-                    st.caption(f"Escuela: {escuela_tercero}")
+                st.metric("Tercer lugar", tercero_1 if tercero_1 else "No definido")
+                if escuela_tercero1:
+                    st.caption(f"Escuela: {escuela_tercero1}")
+            
+            with col4:
+                st.metric("Tercer lugar", tercero_2 if tercero_2 else "No definido")
+                if escuela_tercero2:
+                    st.caption(f"Escuela: {escuela_tercero2}")
 
+            st.write(f"**Reglamento:** {grafica['tipo_competencia']}")
             st.write(f"**Reglamento:** {grafica['reglamento']}")
             st.write(f"**Modalidad:** {grafica['modalidad']}")
             st.write(f"**Categoría:** {grafica['categoria_edad']}")
             st.write(f"**Sexo:** {grafica['sexo']}")
+            
+            ################Tabla de competidores
+            st.divider()
+
+            st.subheader("Competidores de la categoría")
+            
+            df = pd.DataFrame(grafica["competidores"])
+            
+            df.index = df.index + 1
+            
+            st.dataframe(
+                df,
+                use_container_width=True,
+                hide_index=False
+            )
+            #####################################
     
             if st.button(
                 f"Premiación entregada - {grafica['id']}"
@@ -934,21 +1003,18 @@ elif rol == "Finalizar Torneo":
         "Esta acción eliminará TODOS los resultados "
         "finales y TODOS los puntos acumulados por escuelas."
     )
-
-    confirmar = st.checkbox(
-        "Entiendo que esta acción no se puede deshacer"
+    
+    password = st.text_input(
+        "Ingrese la contraseña de administrador",
+        type="password"
     )
-
-    if confirmar:
-
-        if st.button(
-            "BORRAR RESULTADOS DEL TORNEO"
-        ):
-
+    
+    if st.button("BORRAR RESULTADOS DEL TORNEO"):
+    
+        if password == "CHARRO_ME_LA_PELA":
             finalizar_torneo()
-
-            st.success(
-                "El torneo fue reiniciado correctamente."
-            )
-
+            st.success("El torneo fue reiniciado correctamente.")
             st.rerun()
+    
+        else:
+            st.error("Contraseña incorrecta.")
