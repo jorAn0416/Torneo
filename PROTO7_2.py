@@ -202,32 +202,56 @@ def obtener_escuela(grafica, nombre_competidor):
 
 
 def crear_encuentros(competidores):
+
     lista = competidores.copy()
     random.shuffle(lista)
 
     encuentros = []
 
-    while len(lista) >= 2:
+   
+    # RONDA PRELIMINAR
+
+    if len(lista) % 2 == 1:
+
         c1 = lista.pop(0)
         c2 = lista.pop(0)
 
         encuentros.append({
+
+            "tipo":"preliminar",
+            "ronda": 0,
+            "nombre_ronda": "Preliminar",
+
             "competidor_1": c1,
             "competidor_2": c2,
+
             "resultado": None,
             "ganador": None,
             "perdedor": None,
             "finalizado": False
         })
 
-    if len(lista) == 1:
+    
+    # PRIMERA RONDA
+
+    while len(lista) >= 2:
+
+        c1 = lista.pop(0)
+        c2 = lista.pop(0)
+
         encuentros.append({
-            "competidor_1": lista[0],
-            "competidor_2": None,
-            "resultado": "BYE",
-            "ganador": lista[0],
+
+            "tipo":"normal",
+            "ronda": 1,
+            "nombre_ronda": "Primera ronda",
+
+            "competidor_1": c1,
+            "competidor_2": c2,
+
+            "resultado": None,
+            "ganador": None,
             "perdedor": None,
-            "finalizado": True
+            "finalizado": False
         })
 
     return encuentros
