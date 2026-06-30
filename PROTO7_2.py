@@ -201,23 +201,25 @@ def obtener_escuela(grafica, nombre_competidor):
     return "Sin escuela registrada"
 
 
-def crear_encuentros(competidores):
+def crear_encuentros(competidores, hacer_preliminar=True):
 
     lista = competidores.copy()
     random.shuffle(lista)
 
     encuentros = []
 
-   
-    # RONDA PRELIMINAR
-
-    if len(lista) % 2 == 1:
+    # -----------------------------
+    # SI HAY PRELIMINAR
+    # -----------------------------
+    if hacer_preliminar and len(lista) % 2 == 1:
 
         c1 = lista.pop(0)
         c2 = lista.pop(0)
 
-        encuentros.append({
+        esperan = lista.copy()
 
+        encuentros.append({
+            "tipo": "preliminar",
             "ronda": 0,
             "nombre_ronda": "Preliminar",
 
@@ -230,16 +232,18 @@ def crear_encuentros(competidores):
             "finalizado": False
         })
 
-    
-    # PRIMERA RONDA
+        return encuentros, esperan
 
+    # -----------------------------
+    # SI NO HAY PRELIMINAR
+    # -----------------------------
     while len(lista) >= 2:
 
         c1 = lista.pop(0)
         c2 = lista.pop(0)
 
         encuentros.append({
-
+            "tipo": "normal",
             "ronda": 1,
             "nombre_ronda": "Primera ronda",
 
@@ -252,11 +256,12 @@ def crear_encuentros(competidores):
             "finalizado": False
         })
 
-    return encuentros
+    return encuentros, []
 
 
 def crear_grafica(nombre_grafica, reglamento, modalidad, categoria_edad, sexo):
     competidores = st.session_state.competidores_temp.copy()
+    encuentros, esperan = crear_encuentros(competidores)
 
     nueva_grafica = {
         "id": None,
@@ -268,7 +273,8 @@ def crear_grafica(nombre_grafica, reglamento, modalidad, categoria_edad, sexo):
         "competidores": competidores,
         "estatus": "Pendiente",
         "ronda_actual": 1,
-        "encuentros": crear_encuentros(competidores),
+        "encuentros": encuentros,
+        "esperan": esperan,
         "historial": [],
         "ganadores": {
             "primer_lugar": "",
@@ -314,7 +320,10 @@ def avanzar_ronda_si_corresponde(grafica):
             for e in encuentros
             if e["ganador"] is not None
         ]
-
+        
+        ganadores.extend(grafica.get("esperan", []))
+        grafica["esperan"] = []
+        
         # Si ya solo queda un ganador, terminó la gráfica
         if len(ganadores) == 1:
             grafica["estatus"] = "Finalizado"
@@ -339,7 +348,14 @@ def avanzar_ronda_si_corresponde(grafica):
             return
 
         grafica["ronda_actual"] += 1
-        grafica["encuentros"] = crear_encuentros(ganadores)
+        encuentros, esperan = crear_encuentros(
+            ganadores,
+            hacer_preliminar=False
+        )
+        
+        grafica["encuentros"] = encuentros
+        grafica["esperan"] = esperan
+        
 
 #################################
 def cargar_como_plantilla(grafica):
