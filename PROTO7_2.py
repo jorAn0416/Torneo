@@ -202,61 +202,59 @@ def obtener_escuela(grafica, nombre_competidor):
 
 
 def crear_encuentros(competidores, hacer_preliminar=True):
-
     lista = competidores.copy()
     random.shuffle(lista)
-
+    
     encuentros = []
-
+    esperan = []
+    
     # -----------------------------
-    # SI HAY PRELIMINAR
+    # SI HAY PRELIMINAR (solo para reducir impares)
     # -----------------------------
     if hacer_preliminar and len(lista) % 2 == 1:
-
+        # Tomamos 2 competidores para el preliminar
         c1 = lista.pop(0)
         c2 = lista.pop(0)
-
+        
+        # Los demás ESPERAN a que termine el preliminar
         esperan = lista.copy()
-
+        
+        # Creamos el encuentro preliminar
         encuentros.append({
             "tipo": "preliminar",
             "ronda": 0,
             "nombre_ronda": "Preliminar",
-
             "competidor_1": c1,
             "competidor_2": c2,
-
             "resultado": None,
             "ganador": None,
             "perdedor": None,
             "finalizado": False
         })
-
+        
+        # Retornamos solo el encuentro preliminar y los que esperan
         return encuentros, esperan
-
+    
     # -----------------------------
-    # SI NO HAY PRELIMINAR
+    # RONDA NORMAL (cuando ya son pares)
     # -----------------------------
     while len(lista) >= 2:
-
         c1 = lista.pop(0)
         c2 = lista.pop(0)
-
+        
         encuentros.append({
             "tipo": "normal",
-            "ronda": 1,
-            "nombre_ronda": "Primera ronda",
-
+            "ronda": 1,  # La ronda se actualizará después
+            "nombre_ronda": "Ronda",
             "competidor_1": c1,
             "competidor_2": c2,
-
             "resultado": None,
             "ganador": None,
             "perdedor": None,
             "finalizado": False
         })
-
-    return encuentros, []
+    
+    return encuentros, esperan
 
 
 def crear_grafica(nombre_grafica, reglamento, modalidad, categoria_edad, sexo):
@@ -313,48 +311,63 @@ def obtener_dataframe_graficas():
 
 def avanzar_ronda_si_corresponde(grafica):
     encuentros = grafica["encuentros"]
-
-    if all(e["finalizado"] for e in encuentros):
-        ganadores = [
-            e["ganador"]
-            for e in encuentros
-            if e["ganador"] is not None
-        ]
+    
+    # Verificar si todos los encuentros están finalizados
+    if not all(e["finalizado"] for e in encuentros):
+        return
+    
+    # Recoger ganadores de esta ronda
+    ganadores = [
+        e["ganador"]
+        for e in encuentros
+        if e["ganador"] is not None
+    ]
+    
+    # Añadir los que estaban esperando
+    ganadores.extend(grafica.get("esperan", []))
+    grafica["esperan"] = []
+    
+    # Si ya solo queda un ganador, terminó la gráfica
+    if len(ganadores) == 1:
+        grafica["estatus"] = "Finalizado"
         
-        ganadores.extend(grafica.get("esperan", []))
-        grafica["esperan"] = []
+        if grafica["historial"]:
+            ultima_ronda = max(r["ronda"] for r in grafica["historial"])
+            resultados_ultima_ronda = [
+                r for r in grafica["historial"]
+                if r["ronda"] == ultima_ronda
+            ]
+            final = resultados_ultima_ronda[-1]
+            grafica["ganadores"]["primer_lugar"] = final.get("ganador", "")
+            grafica["ganadores"]["segundo_lugar"] = final.get("perdedor", "")
+        else:
+            grafica["ganadores"]["primer_lugar"] = ganadores[0]["nombre"]
         
-        # Si ya solo queda un ganador, terminó la gráfica
-        if len(ganadores) == 1:
-            grafica["estatus"] = "Finalizado"
-
-            # El primer lugar sale del último resultado real registrado
-            if grafica["historial"]:
-                ultima_ronda = max(r["ronda"] for r in grafica["historial"])
-
-                resultados_ultima_ronda = [
-                    r for r in grafica["historial"]
-                    if r["ronda"] == ultima_ronda
-                ]
-
-                final = resultados_ultima_ronda[-1]
-
-                grafica["ganadores"]["primer_lugar"] = final.get("ganador", "")
-                grafica["ganadores"]["segundo_lugar"] = final.get("perdedor", "")
-
-            else:
-                grafica["ganadores"]["primer_lugar"] = ganadores[0]["nombre"]
-
-            return
-
-        grafica["ronda_actual"] += 1
-        encuentros, esperan = crear_encuentros(
-            ganadores,
-            hacer_preliminar=False
-        )
-        
-        grafica["encuentros"] = encuentros
-        grafica["esperan"] = esperan
+        return
+    
+    # Si hay 2 ganadores, es la final - no necesita preliminar
+    if len(ganadores) == 2:
+        hacer_preliminar = False
+    else:
+        # Si son más de 2, verificar si necesitamos preliminar
+        hacer_preliminar = len(ganadores) % 2 == 1
+    
+    grafica["ronda_actual"] += 1
+    
+    # Crear nuevos encuentros con la posibilidad de preliminar
+    nuevos_encuentros, nuevos_esperan = crear_encuentros(
+        ganadores,
+        hacer_preliminar=hacer_preliminar
+    )
+    
+    # Actualizar el número de ronda en los nuevos encuentros
+    for encuentro in nuevos_encuentros:
+        if encuentro["tipo"] == "normal":
+            encuentro["ronda"] = grafica["ronda_actual"]
+        encuentro["nombre_ronda"] = f"Ronda {grafica['ronda_actual']}"
+    
+    grafica["encuentros"] = nuevos_encuentros
+    grafica["esperan"] = nuevos_esperan
         
 
 #################################
