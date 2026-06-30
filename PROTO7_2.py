@@ -41,6 +41,7 @@ def convertir_grafica_a_fila(grafica):
         "ronda_actual": grafica["ronda_actual"],
         "competidores_json": grafica["competidores"],
         "encuentros_json": grafica["encuentros"],
+        "esperan_json": grafica.get("esperan", []),  # ← Agregar esta línea
         "historial_json": grafica["historial"],
         "ganadores_json": grafica["ganadores"],
         "fecha_creacion": grafica["fecha_creacion"]
@@ -102,6 +103,7 @@ def convertir_fila_a_grafica(fila):
         "ronda_actual": fila["ronda_actual"],
         "competidores": fila["competidores_json"] or [],
         "encuentros": fila["encuentros_json"] or [],
+        "esperan": fila.get("esperan_json", []),  # ← Añadir esta línea
         "historial": fila["historial_json"] or [],
         "ganadores": fila["ganadores_json"] or {
             "primer_lugar": "",
