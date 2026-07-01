@@ -154,10 +154,58 @@ def actualizar_grafica_db(grafica):
         .execute()
     )
 def calcular_premiacion(grafica):
+    """
+    Calcula la premiación según el tipo de competencia.
+    - Eliminación directa: busca perdedores de semifinal
+    - Round Robin: usa la tabla de posiciones
+    """
+    # Si es Round Robin, obtener de la tabla de posiciones
+    if grafica.get("tipo_competencia") == "Round Robin":
+        resultados = grafica.get("resultados_round_robin", {})
+        
+        if not resultados:
+            return "", "", "", ""
+        
+        # Ordenar por encuentros ganados
+        if grafica["modalidad"] == "Kata":
+            lista = sorted(
+                resultados.values(),
+                key=lambda x: (
+                    x.get("encuentros_ganados", 0),
+                    x.get("banderas_favor", 0),
+                    -x.get("banderas_contra", 0)
+                ),
+                reverse=True
+            )
+        else:
+            lista = sorted(
+                resultados.values(),
+                key=lambda x: (
+                    x.get("encuentros_ganados", 0),
+                    x.get("puntos_favor", 0),
+                    -(x.get("faltas_totales", 0) + x.get("faltas_tipo1", 0) + x.get("faltas_tipo2", 0))
+                ),
+                reverse=True
+            )
+        
+        primer = lista[0]["nombre"] if len(lista) > 0 else ""
+        segundo = lista[1]["nombre"] if len(lista) > 1 else ""
+        tercero_1 = lista[2]["nombre"] if len(lista) > 2 else ""
+        tercero_2 = lista[3]["nombre"] if len(lista) > 3 else ""
+        
+        # Actualizar ganadores en la gráfica
+        grafica["ganadores"]["primer_lugar"] = primer
+        grafica["ganadores"]["segundo_lugar"] = segundo
+        grafica["ganadores"]["tercero_1"] = tercero_1
+        grafica["ganadores"]["tercero_2"] = tercero_2
+        
+        return primer, segundo, tercero_1, tercero_2
+    
+    # Lógica original para eliminación directa
     historial = grafica["historial"]
 
     if not historial:
-        return "", "", ""
+        return "", "", "", ""
 
     ultima_ronda = max(r["ronda"] for r in historial)
 
@@ -797,25 +845,26 @@ def determinar_ganadores_round_robin(grafica):
         # Ordenar por: ganados, banderas favor, menos banderas contra
         lista_resultados.sort(
             key=lambda x: (
-                x["encuentros_ganados"],
-                x["banderas_favor"],
-                -x["banderas_contra"]
+                x.get("encuentros_ganados", 0),
+                x.get("banderas_favor", 0),
+                -x.get("banderas_contra", 0)
             ),
             reverse=True
         )
     else:
-        # Ordenar por: ganados, puntos favor, menos faltas totales
+        # Ordenar por: ganados, puntos favor, menos faltas
         lista_resultados.sort(
             key=lambda x: (
-                x["encuentros_ganados"],
-                x["puntos_favor"],
-                -(x.get("faltas_totales", 0)),  # ← Menos faltas totales
-                -(x["faltas_tipo1"]),           # ← Menos faltas tipo 1
-                -(x["faltas_tipo2"])            # ← Menos faltas tipo 2
+                x.get("encuentros_ganados", 0),
+                x.get("puntos_favor", 0),
+                -(x.get("faltas_totales", 0)),  # Menos faltas totales (WKF)
+                -(x.get("faltas_tipo1", 0)),    # Menos faltas tipo 1 (WUKF)
+                -(x.get("faltas_tipo2", 0))     # Menos faltas tipo 2 (WUKF)
             ),
             reverse=True
         )
     
+    # Asignar lugares según la posición en la tabla
     grafica["ganadores"]["primer_lugar"] = lista_resultados[0]["nombre"] if len(lista_resultados) > 0 else ""
     grafica["ganadores"]["segundo_lugar"] = lista_resultados[1]["nombre"] if len(lista_resultados) > 1 else ""
     grafica["ganadores"]["tercero_1"] = lista_resultados[2]["nombre"] if len(lista_resultados) > 2 else ""
