@@ -37,7 +37,8 @@ def convertir_grafica_a_fila(grafica):
         "modalidad": grafica["modalidad"],
         "categoria_edad": grafica["categoria_edad"],
         "sexo": grafica["sexo"],
-        "area": grafica.get("area", "Área 1"),  # ← NUEVO
+        "area": grafica.get("area", "Área 1"),
+        "tipo_competencia": grafica.get("tipo_competencia", "eliminacion_directa"),  # ← NUEVO
         "estatus": grafica["estatus"],
         "ronda_actual": grafica["ronda_actual"],
         "competidores_json": grafica["competidores"],
@@ -100,7 +101,8 @@ def convertir_fila_a_grafica(fila):
         "modalidad": fila["modalidad"],
         "categoria_edad": fila["categoria_edad"],
         "sexo": fila["sexo"],
-        "area": fila.get("area", "Área 1"),  # ← NUEVO
+        "area": fila.get("area", "Área 1"),
+        "tipo_competencia": fila.get("tipo_competencia", "eliminacion_directa"),  # ← NUEVO
         "estatus": fila["estatus"],
         "ronda_actual": fila["ronda_actual"],
         "competidores": fila["competidores_json"] or [],
@@ -324,9 +326,13 @@ def crear_encuentros(competidores, hacer_preliminar=True, evitar_misma_escuela=T
     return encuentros, esperan
 
 
-def crear_grafica(nombre_grafica, reglamento, modalidad, categoria_edad, sexo, area):
+def crear_grafica(nombre_grafica, reglamento, modalidad, categoria_edad, sexo, area, tipo_competencia):
     competidores = st.session_state.competidores_temp.copy()
-    encuentros, esperan = crear_encuentros(competidores, evitar_misma_escuela=True)
+    
+    if tipo_competencia == "Round Robin":
+        encuentros, esperan = crear_encuentros_round_robin(competidores)
+    else:
+        encuentros, esperan = crear_encuentros(competidores, evitar_misma_escuela=True)
 
     nueva_grafica = {
         "id": None,
@@ -335,13 +341,15 @@ def crear_grafica(nombre_grafica, reglamento, modalidad, categoria_edad, sexo, a
         "modalidad": modalidad,
         "categoria_edad": categoria_edad,
         "sexo": sexo,
-        "area": area,  # ← NUEVO
+        "area": area,
+        "tipo_competencia": tipo_competencia,  # ← NUEVO
         "competidores": competidores,
         "estatus": "Pendiente",
         "ronda_actual": 1,
         "encuentros": encuentros,
         "esperan": esperan,
         "historial": [],
+        "resultados_round_robin": {},  # ← NUEVO
         "ganadores": {
             "primer_lugar": "",
             "segundo_lugar": "",
@@ -350,6 +358,10 @@ def crear_grafica(nombre_grafica, reglamento, modalidad, categoria_edad, sexo, a
         },
         "fecha_creacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
+    
+    # Inicializar acumuladores para Round Robin
+    if tipo_competencia == "Round Robin":
+        nueva_grafica = inicializar_resultados_round_robin(nueva_grafica)
 
     nuevo_id = guardar_grafica_db(nueva_grafica)
     st.session_state.graficas = cargar_graficas_db()
@@ -613,6 +625,205 @@ def finalizar_torneo():
     )
 ####################################
 
+######################ROUND_ROBIN#############################################
+def crear_encuentros_round_robin(competidores):
+    """
+    Crea todos los encuentros para un sistema Round Robin.
+    Cada competidor se enfrenta a todos los demás exactamente una vez.
+    """
+    n = len(competidores)
+    encuentros = []
+    
+    # Generar todos los pares únicos (todos contra todos)
+    for i in range(n):
+        for j in range(i + 1, n):
+            encuentros.append({
+                "tipo": "round_robin",
+                "ronda": 1,  # Se actualizará después
+                "nombre_ronda": "Round Robin",
+                "competidor_1": competidores[i],
+                "competidor_2": competidores[j],
+                "resultado": None,
+                "ganador": None,
+                "perdedor": None,
+                "finalizado": False
+            })
+    
+    # Organizar en rondas (opcional: algoritmo de calendarización)
+    random.shuffle(encuentros)
+    
+    return encuentros, []
+
+
+def inicializar_resultados_round_robin(grafica):
+    """
+    Inicializa los acumuladores de resultados para Round Robin.
+    """
+    resultados = {}
+    for competidor in grafica["competidores"]:
+        resultados[competidor["nombre"]] = {
+            "nombre": competidor["nombre"],
+            "escuela": competidor["escuela"],
+            "puntos_favor": 0,
+            "puntos_contra": 0,
+            "banderas_favor": 0,
+            "banderas_contra": 0,
+            "faltas_tipo1": 0,
+            "faltas_tipo2": 0,
+            "encuentros_ganados": 0,
+            "encuentros_perdidos": 0,
+            "encuentros_empatados": 0
+        }
+    
+    grafica["resultados_round_robin"] = resultados
+    return grafica
+
+
+def actualizar_acumulados_round_robin(grafica, resultado):
+    """
+    Actualiza los acumulados después de cada encuentro de Round Robin.
+    """
+    resultados = grafica.get("resultados_round_robin", {})
+    
+    c1_nombre = resultado["competidor_1"]
+    c2_nombre = resultado["competidor_2"]
+    ganador = resultado["ganador"]
+    
+    # Inicializar si no existen
+    if c1_nombre not in resultados:
+        resultados[c1_nombre] = crear_acumulador_vacio()
+    if c2_nombre not in resultados:
+        resultados[c2_nombre] = crear_acumulador_vacio()
+    
+    # Actualizar según tipo de competencia
+    if grafica["modalidad"] == "Kata":
+        banderas_1 = resultado.get("banderas_rojo", 0)
+        banderas_2 = resultado.get("banderas_azul", resultado.get("banderas_blanco", 0))
+        
+        resultados[c1_nombre]["banderas_favor"] += banderas_1
+        resultados[c1_nombre]["banderas_contra"] += banderas_2
+        resultados[c2_nombre]["banderas_favor"] += banderas_2
+        resultados[c2_nombre]["banderas_contra"] += banderas_1
+        
+        if ganador == c1_nombre:
+            resultados[c1_nombre]["encuentros_ganados"] += 1
+            resultados[c2_nombre]["encuentros_perdidos"] += 1
+        elif ganador == c2_nombre:
+            resultados[c2_nombre]["encuentros_ganados"] += 1
+            resultados[c1_nombre]["encuentros_perdidos"] += 1
+        else:
+            resultados[c1_nombre]["encuentros_empatados"] += 1
+            resultados[c2_nombre]["encuentros_empatados"] += 1
+            
+    else:  # Kumite
+        puntos_1 = resultado.get("puntos_1", 0)
+        puntos_2 = resultado.get("puntos_2", 0)
+        
+        # Faltas totales (WKF)
+        faltas_1 = resultado.get("faltas_1", 0)
+        faltas_2 = resultado.get("faltas_2", 0)
+        
+        # Faltas por tipo (WUKF)
+        faltas_t1_1 = resultado.get("faltas_tipo1_1", 0)
+        faltas_t1_2 = resultado.get("faltas_tipo1_2", 0)
+        faltas_t2_1 = resultado.get("faltas_tipo2_1", 0)
+        faltas_t2_2 = resultado.get("faltas_tipo2_2", 0)
+        
+        # Actualizar puntos
+        resultados[c1_nombre]["puntos_favor"] += puntos_1
+        resultados[c1_nombre]["puntos_contra"] += puntos_2
+        resultados[c2_nombre]["puntos_favor"] += puntos_2
+        resultados[c2_nombre]["puntos_contra"] += puntos_1
+        
+        # Actualizar faltas totales
+        resultados[c1_nombre]["faltas_totales"] = resultados[c1_nombre].get("faltas_totales", 0) + faltas_1
+        resultados[c2_nombre]["faltas_totales"] = resultados[c2_nombre].get("faltas_totales", 0) + faltas_2
+        
+        # Actualizar faltas por tipo
+        resultados[c1_nombre]["faltas_tipo1"] += faltas_t1_1
+        resultados[c1_nombre]["faltas_tipo2"] += faltas_t2_1
+        resultados[c2_nombre]["faltas_tipo1"] += faltas_t1_2
+        resultados[c2_nombre]["faltas_tipo2"] += faltas_t2_2
+        
+        # Actualizar encuentros ganados/perdidos/empatados
+        if ganador == c1_nombre:
+            resultados[c1_nombre]["encuentros_ganados"] += 1
+            resultados[c2_nombre]["encuentros_perdidos"] += 1
+        elif ganador == c2_nombre:
+            resultados[c2_nombre]["encuentros_ganados"] += 1
+            resultados[c1_nombre]["encuentros_perdidos"] += 1
+        else:
+            resultados[c1_nombre]["encuentros_empatados"] += 1
+            resultados[c2_nombre]["encuentros_empatados"] += 1
+    
+    grafica["resultados_round_robin"] = resultados
+    return grafica
+
+def crear_acumulador_vacio():
+    """Crea un acumulador vacío para un competidor."""
+    return {
+        "puntos_favor": 0,
+        "puntos_contra": 0,
+        "banderas_favor": 0,
+        "banderas_contra": 0,
+        "faltas_totales": 0,  # ← NUEVO: Para WKF
+        "faltas_tipo1": 0,
+        "faltas_tipo2": 0,
+        "encuentros_ganados": 0,
+        "encuentros_perdidos": 0,
+        "encuentros_empatados": 0
+    }
+
+
+def determinar_ganadores_round_robin(grafica):
+    """
+    Determina los ganadores al finalizar un Round Robin.
+    Criterios de desempate:
+    1. Más encuentros ganados
+    2. Más puntos/banderas a favor
+    3. Menos faltas totales
+    4. Menos faltas tipo 1
+    5. Menos faltas tipo 2
+    """
+    resultados = grafica.get("resultados_round_robin", {})
+    
+    if not resultados:
+        return grafica
+    
+    # Convertir a lista para ordenar
+    lista_resultados = list(resultados.values())
+    
+    if grafica["modalidad"] == "Kata":
+        # Ordenar por: ganados, banderas favor, menos banderas contra
+        lista_resultados.sort(
+            key=lambda x: (
+                x["encuentros_ganados"],
+                x["banderas_favor"],
+                -x["banderas_contra"]
+            ),
+            reverse=True
+        )
+    else:
+        # Ordenar por: ganados, puntos favor, menos faltas totales
+        lista_resultados.sort(
+            key=lambda x: (
+                x["encuentros_ganados"],
+                x["puntos_favor"],
+                -(x.get("faltas_totales", 0)),  # ← Menos faltas totales
+                -(x["faltas_tipo1"]),           # ← Menos faltas tipo 1
+                -(x["faltas_tipo2"])            # ← Menos faltas tipo 2
+            ),
+            reverse=True
+        )
+    
+    grafica["ganadores"]["primer_lugar"] = lista_resultados[0]["nombre"] if len(lista_resultados) > 0 else ""
+    grafica["ganadores"]["segundo_lugar"] = lista_resultados[1]["nombre"] if len(lista_resultados) > 1 else ""
+    grafica["ganadores"]["tercero_1"] = lista_resultados[2]["nombre"] if len(lista_resultados) > 2 else ""
+    grafica["ganadores"]["tercero_2"] = lista_resultados[3]["nombre"] if len(lista_resultados) > 3 else ""
+    
+    return grafica
+############################FIN_ROUND_ROBIN####################################
+
 # =========================
 # INTERFAZ PRINCIPAL
 # =========================
@@ -640,6 +851,12 @@ if rol == "Registro":
     col1, col2, col3 = st.columns(3)
 
     with col1:
+        
+        tipo_competencia = st.selectbox(
+            "Tipo de competencia",
+            ["Eliminación directa", "Round Robin"],
+            index=0
+        )
 
         nombre_grafica = st.text_input(
             "Nombre de la gráfica",
@@ -761,7 +978,8 @@ if rol == "Registro":
                 modalidad,
                 categoria_edad,
                 sexo,
-                area
+                area,
+                tipo_competencia
             )
     
             # LIMPIAR DATOS DE LA PLANTILLA
