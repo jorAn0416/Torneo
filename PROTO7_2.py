@@ -17,7 +17,7 @@ if "graficas" not in st.session_state:
 if "competidores_temp" not in st.session_state:
     st.session_state.competidores_temp = []
     
-# =========================
+# =========================determinar_ganadores_round_robin  
 # BASE DE DATOS SUPABASE
 # =========================
 
@@ -38,13 +38,14 @@ def convertir_grafica_a_fila(grafica):
         "categoria_edad": grafica["categoria_edad"],
         "sexo": grafica["sexo"],
         "area": grafica.get("area", "Área 1"),
-        "tipo_competencia": grafica.get("tipo_competencia", "eliminacion_directa"),  # ← NUEVO
+        "tipo_competencia": grafica.get("tipo_competencia", "eliminacion_directa"),
         "estatus": grafica["estatus"],
         "ronda_actual": grafica["ronda_actual"],
         "competidores_json": grafica["competidores"],
         "encuentros_json": grafica["encuentros"],
         "esperan_json": grafica.get("esperan", []),
         "historial_json": grafica["historial"],
+        "resultados_round_robin": grafica.get("resultados_round_robin", {}),  # ← AGREGAR ESTA LÍNEA
         "ganadores_json": grafica["ganadores"],
         "fecha_creacion": grafica["fecha_creacion"]
     }
@@ -102,17 +103,19 @@ def convertir_fila_a_grafica(fila):
         "categoria_edad": fila["categoria_edad"],
         "sexo": fila["sexo"],
         "area": fila.get("area", "Área 1"),
-        "tipo_competencia": fila.get("tipo_competencia", "eliminacion_directa"),  # ← NUEVO
+        "tipo_competencia": fila.get("tipo_competencia", "eliminacion_directa"),
         "estatus": fila["estatus"],
         "ronda_actual": fila["ronda_actual"],
         "competidores": fila["competidores_json"] or [],
         "encuentros": fila["encuentros_json"] or [],
         "esperan": fila.get("esperan_json", []),
         "historial": fila["historial_json"] or [],
+        "resultados_round_robin": fila.get("resultados_round_robin", {}),  # ← AGREGAR ESTA LÍNEA
         "ganadores": fila["ganadores_json"] or {
             "primer_lugar": "",
             "segundo_lugar": "",
-            "tercer_lugar": ""
+            "tercero_1": "",  # ← CORREGIR: dice "tercer_lugar" debe ser "tercero_1"
+            "tercero_2": ""   # ← AGREGAR
         },
         "fecha_creacion": fila["fecha_creacion"]
     }
