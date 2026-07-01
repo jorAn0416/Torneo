@@ -37,11 +37,12 @@ def convertir_grafica_a_fila(grafica):
         "modalidad": grafica["modalidad"],
         "categoria_edad": grafica["categoria_edad"],
         "sexo": grafica["sexo"],
+        "area": grafica.get("area", "Área 1"),  # ← NUEVO
         "estatus": grafica["estatus"],
         "ronda_actual": grafica["ronda_actual"],
         "competidores_json": grafica["competidores"],
         "encuentros_json": grafica["encuentros"],
-        "esperan_json": grafica.get("esperan", []),  # ← Agregar esta línea
+        "esperan_json": grafica.get("esperan", []),
         "historial_json": grafica["historial"],
         "ganadores_json": grafica["ganadores"],
         "fecha_creacion": grafica["fecha_creacion"]
@@ -99,11 +100,12 @@ def convertir_fila_a_grafica(fila):
         "modalidad": fila["modalidad"],
         "categoria_edad": fila["categoria_edad"],
         "sexo": fila["sexo"],
+        "area": fila.get("area", "Área 1"),  # ← NUEVO
         "estatus": fila["estatus"],
         "ronda_actual": fila["ronda_actual"],
         "competidores": fila["competidores_json"] or [],
         "encuentros": fila["encuentros_json"] or [],
-        "esperan": fila.get("esperan_json", []),  # ← Añadir esta línea
+        "esperan": fila.get("esperan_json", []),
         "historial": fila["historial_json"] or [],
         "ganadores": fila["ganadores_json"] or {
             "primer_lugar": "",
@@ -322,10 +324,10 @@ def crear_encuentros(competidores, hacer_preliminar=True, evitar_misma_escuela=T
     return encuentros, esperan
 
 
-def crear_grafica(nombre_grafica, reglamento, modalidad, categoria_edad, sexo):
+def crear_grafica(nombre_grafica, reglamento, modalidad, categoria_edad, sexo, area):
     competidores = st.session_state.competidores_temp.copy()
-    # PRIMERA RONDA: evitar misma escuela
     encuentros, esperan = crear_encuentros(competidores, evitar_misma_escuela=True)
+
     nueva_grafica = {
         "id": None,
         "nombre_grafica": nombre_grafica,
@@ -333,6 +335,7 @@ def crear_grafica(nombre_grafica, reglamento, modalidad, categoria_edad, sexo):
         "modalidad": modalidad,
         "categoria_edad": categoria_edad,
         "sexo": sexo,
+        "area": area,  # ← NUEVO
         "competidores": competidores,
         "estatus": "Pendiente",
         "ronda_actual": 1,
@@ -366,13 +369,13 @@ def obtener_dataframe_graficas():
             "Modalidad": grafica["modalidad"],
             "Edad": grafica["categoria_edad"],
             "Sexo": grafica["sexo"],
+            "Área": grafica.get("area", "Área 1"),  # ← NUEVO
             "Competidores": len(grafica["competidores"]),
             "Ronda": grafica["ronda_actual"],
             "Estatus": grafica["estatus"]
         })
 
     return pd.DataFrame(datos)
-
 
 def avanzar_ronda_si_corresponde(grafica):
     encuentros = grafica["encuentros"]
@@ -683,12 +686,16 @@ if rol == "Registro":
 
     with col3:
         categoria_edad = st.text_input(
-        "Categoría de edad",
-        value=st.session_state.get(
-            "plantilla_categoria",
-            ""
+            "Categoría de edad",
+            value=st.session_state.get("plantilla_categoria", "")
         )
-    )
+        
+        # NUEVO: Selector de área
+        area = st.selectbox(
+            "Área",
+            ["Área 1", "Área 2", "Área 3", "Área 4", "Área 5", "Área 6", "Área 7", "Área 8"],
+            index=0
+        )
 
     st.divider()
 
@@ -753,7 +760,8 @@ if rol == "Registro":
                 reglamento,
                 modalidad,
                 categoria_edad,
-                sexo
+                sexo,
+                area
             )
     
             # LIMPIAR DATOS DE LA PLANTILLA
