@@ -28,7 +28,7 @@ def conectar_supabase():
 supabase = conectar_supabase()
 
 # =========================
-# FUNCIONES
+# FUNCIONES DE DATOS
 # =========================
 
 @st.cache_data(ttl=3)
@@ -128,79 +128,6 @@ def formatear_competidor(competidor):
     if isinstance(competidor, dict):
         return competidor
     return {"nombre": competidor, "escuela": "Sin escuela"}
-
-
-# =========================
-# INTERFAZ PRINCIPAL
-# =========================
-
-st.title("🏆 Torneo de Karate - Visualización en Vivo")
-
-# Cargar datos
-datos = cargar_graficas()
-graficas = [convertir_fila_a_grafica(fila) for fila in datos]
-
-if not graficas:
-    st.info("📋 No hay gráficas registradas en el torneo.")
-    st.stop()
-
-# =========================
-# FILTROS
-# =========================
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    areas_disponibles = list(set(g["area"] for g in graficas))
-    area_filtro = st.selectbox(
-        "📍 Filtrar por Área",
-        ["Todas"] + sorted(areas_disponibles)
-    )
-
-with col2:
-    estatus_filtro = st.selectbox(
-        "📊 Filtrar por Estatus",
-        ["Todos", "Pendiente", "En desarrollo", "Finalizado"]
-    )
-
-with col3:
-    modalidades = list(set(g["modalidad"] for g in graficas))
-    modalidad_filtro = st.selectbox(
-        "🥋 Filtrar por Modalidad",
-        ["Todas"] + sorted(modalidades)
-    )
-
-# Aplicar filtros
-graficas_filtradas = graficas.copy()
-
-if area_filtro != "Todas":
-    graficas_filtradas = [g for g in graficas_filtradas if g["area"] == area_filtro]
-
-if estatus_filtro != "Todos":
-    graficas_filtradas = [g for g in graficas_filtradas if g["estatus"] == estatus_filtro]
-
-if modalidad_filtro != "Todas":
-    graficas_filtradas = [g for g in graficas_filtradas if g["modalidad"] == modalidad_filtro]
-
-# =========================
-# LISTADO DE GRÁFICAS
-# =========================
-
-st.divider()
-
-# Crear tabs para cada gráfica
-if graficas_filtradas:
-    tabs = st.tabs([
-        f"{'🔴' if g['estatus'] == 'Finalizado' else '🟡' if g['estatus'] == 'En desarrollo' else '⚪'} "
-        f"{g['nombre_grafica']} ({g['modalidad']})"
-        for g in graficas_filtradas
-    ])
-    
-    for tab, grafica in zip(tabs, graficas_filtradas):
-        with tab:
-            mostrar_detalle_grafica(grafica)
-else:
-    st.info("No hay gráficas que coincidan con los filtros seleccionados.")
 
 
 # =========================
@@ -503,6 +430,78 @@ def mostrar_finalizado(grafica):
         if historial_df:
             st.dataframe(pd.DataFrame(historial_df), use_container_width=True, hide_index=True)
 
+
+# =========================
+# INTERFAZ PRINCIPAL
+# =========================
+
+st.title("🏆 Torneo de Karate - Visualización en Vivo")
+
+# Cargar datos
+datos = cargar_graficas()
+graficas = [convertir_fila_a_grafica(fila) for fila in datos]
+
+if not graficas:
+    st.info("📋 No hay gráficas registradas en el torneo.")
+    st.stop()
+
+# =========================
+# FILTROS
+# =========================
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    areas_disponibles = list(set(g["area"] for g in graficas))
+    area_filtro = st.selectbox(
+        "📍 Filtrar por Área",
+        ["Todas"] + sorted(areas_disponibles)
+    )
+
+with col2:
+    estatus_filtro = st.selectbox(
+        "📊 Filtrar por Estatus",
+        ["Todos", "Pendiente", "En desarrollo", "Finalizado"]
+    )
+
+with col3:
+    modalidades = list(set(g["modalidad"] for g in graficas))
+    modalidad_filtro = st.selectbox(
+        "🥋 Filtrar por Modalidad",
+        ["Todas"] + sorted(modalidades)
+    )
+
+# Aplicar filtros
+graficas_filtradas = graficas.copy()
+
+if area_filtro != "Todas":
+    graficas_filtradas = [g for g in graficas_filtradas if g["area"] == area_filtro]
+
+if estatus_filtro != "Todos":
+    graficas_filtradas = [g for g in graficas_filtradas if g["estatus"] == estatus_filtro]
+
+if modalidad_filtro != "Todas":
+    graficas_filtradas = [g for g in graficas_filtradas if g["modalidad"] == modalidad_filtro]
+
+# =========================
+# LISTADO DE GRÁFICAS
+# =========================
+
+st.divider()
+
+# Crear tabs para cada gráfica
+if graficas_filtradas:
+    tabs = st.tabs([
+        f"{'🔴' if g['estatus'] == 'Finalizado' else '🟡' if g['estatus'] == 'En desarrollo' else '⚪'} "
+        f"{g['nombre_grafica']} ({g['modalidad']})"
+        for g in graficas_filtradas
+    ])
+    
+    for tab, grafica in zip(tabs, graficas_filtradas):
+        with tab:
+            mostrar_detalle_grafica(grafica)
+else:
+    st.info("No hay gráficas que coincidan con los filtros seleccionados.")
 
 # =========================
 # PIE DE PÁGINA
