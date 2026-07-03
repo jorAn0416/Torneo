@@ -227,87 +227,191 @@ def mostrar_en_desarrollo(grafica):
                     <p style="color:white; font-size:24px; margin:10px 0;">Pase directo</p>
                 </div>
                 """, unsafe_allow_html=True)
-        
-        # Siguiente encuentro
-        st.divider()
-        siguiente = obtener_siguiente_encuentro(grafica, indice)
-        
-        if siguiente:
-            st.subheader("⏭️ PRÓXIMO ENCUENTRO")
-            
-            s1 = formatear_competidor(siguiente["competidor_1"])
-            s2 = formatear_competidor(siguiente.get("competidor_2"))
-            
-            col1, col2, col3 = st.columns([2, 1, 2])
-            
-            with col1:
-                st.markdown(f"""
-                <div style="background-color:#444; padding:15px; border-radius:10px; text-align:center;">
-                    <h3 style="color:white; margin:0;">{s1['nombre']}</h3>
-                    <p style="color:#CCC; margin:5px 0;">{s1['escuela']}</p>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col2:
-                st.markdown("<h3 style='text-align:center;'>VS</h3>", unsafe_allow_html=True)
-            
-            with col3:
-                if s2:
-                    st.markdown(f"""
-                    <div style="background-color:#444; padding:15px; border-radius:10px; text-align:center;">
-                        <h3 style="color:white; margin:0;">{s2['nombre']}</h3>
-                        <p style="color:#CCC; margin:5px 0;">{s2['escuela']}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.markdown(f"""
-                    <div style="background-color:#444; padding:15px; border-radius:10px; text-align:center;">
-                        <h3 style="color:white; margin:0;">Por definir</h3>
-                    </div>
-                    """, unsafe_allow_html=True)
-        else:
-            st.info("⏭️ No hay más encuentros pendientes en esta ronda.")
-        
-        # Tabla de resultados
-        if grafica["historial"]:
-            st.divider()
-            st.subheader("📜 Resultados de Rondas Anteriores")
-            
-            resultados_df = []
-            for r in grafica["historial"]:
-                if grafica["modalidad"] == "Kata":
-                    banderas_r1 = r.get("banderas_rojo", 0)
-                    banderas_r2 = r.get("banderas_azul", r.get("banderas_blanco", 0))
-                    resultados_df.append({
-                        "Ronda": r["ronda"],
-                        "Competidor 1": r["competidor_1"],
-                        "Competidor 2": r["competidor_2"],
-                        "Resultado": f"{banderas_r1} - {banderas_r2}",
-                        "Ganador": r["ganador"]
-                    })
-                else:
-                    resultados_df.append({
-                        "Ronda": r["ronda"],
-                        "Competidor 1": r["competidor_1"],
-                        "Competidor 2": r["competidor_2"],
-                        "Resultado": f"{r.get('puntos_1', 0)} - {r.get('puntos_2', 0)}",
-                        "Ganador": r["ganador"]
-                    })
-            
-            if resultados_df:
-                st.dataframe(pd.DataFrame(resultados_df), use_container_width=True, hide_index=True)
-        
-        # Tabla de competidores con estado
-        st.divider()
-        st.subheader("👥 Estado de Competidores")
-        
-        competidores_estado = obtener_competidores_estado(grafica)
-        if competidores_estado:
-            df_estado = pd.DataFrame(competidores_estado)
-            st.dataframe(df_estado, use_container_width=True, hide_index=True)
-        
     else:
         st.info("No hay encuentros en desarrollo.")
+    
+    # =========================
+    # DIAGRAMA DE LLAVES (BRACKET)
+    # =========================
+    st.divider()
+    st.subheader("🏆 Diagrama de Competencia")
+    
+    if grafica["tipo_competencia"] == "Round Robin":
+        st.info("El diagrama de llaves no está disponible para Round Robin. Todos compiten contra todos.")
+    else:
+        # Construir el bracket basado en el historial y encuentros
+        mostrar_bracket_eliminacion(grafica)
+    
+    # Tabla de resultados (solo si hay historial)
+    if grafica["historial"]:
+        st.divider()
+        st.subheader("📜 Resultados de Rondas Anteriores")
+        
+        resultados_df = []
+        for r in grafica["historial"]:
+            if grafica["modalidad"] == "Kata":
+                banderas_r1 = r.get("banderas_rojo", 0)
+                banderas_r2 = r.get("banderas_azul", r.get("banderas_blanco", 0))
+                resultados_df.append({
+                    "Ronda": r["ronda"],
+                    "Competidor 1": r["competidor_1"],
+                    "Competidor 2": r["competidor_2"],
+                    "Resultado": f"{banderas_r1} - {banderas_r2}",
+                    "Ganador": r["ganador"]
+                })
+            else:
+                resultados_df.append({
+                    "Ronda": r["ronda"],
+                    "Competidor 1": r["competidor_1"],
+                    "Competidor 2": r["competidor_2"],
+                    "Resultado": f"{r.get('puntos_1', 0)} - {r.get('puntos_2', 0)}",
+                    "Ganador": r["ganador"]
+                })
+        
+        if resultados_df:
+            st.dataframe(pd.DataFrame(resultados_df), use_container_width=True, hide_index=True)
+    
+    # Tabla de competidores con estado
+    st.divider()
+    st.subheader("👥 Estado de Competidores")
+    
+    competidores_estado = obtener_competidores_estado(grafica)
+    if competidores_estado:
+        df_estado = pd.DataFrame(competidores_estado)
+        st.dataframe(df_estado, use_container_width=True, hide_index=True)
+
+
+def mostrar_bracket_eliminacion(grafica):
+    """
+    Muestra un diagrama de llaves (bracket) para eliminación directa.
+    """
+    # Obtener todos los encuentros organizados por rondas
+    encuentros_por_ronda = {}
+    
+    # Inicializar con los encuentros actuales
+    for e in grafica["encuentros"]:
+        ronda = e.get("ronda", 1)
+        if ronda not in encuentros_por_ronda:
+            encuentros_por_ronda[ronda] = []
+        encuentros_por_ronda[ronda].append(e)
+    
+    # También considerar historial para rondas pasadas
+    for r in grafica["historial"]:
+        ronda = r.get("ronda", 1)
+        if ronda not in encuentros_por_ronda:
+            encuentros_por_ronda[ronda] = []
+        
+        # Crear un pseudo-encuentro desde el historial
+        encuentros_por_ronda[ronda].append({
+            "competidor_1": {"nombre": r.get("competidor_1", "?")},
+            "competidor_2": {"nombre": r.get("competidor_2", "?")},
+            "ganador": {"nombre": r.get("ganador", "?")} if r.get("ganador") else None,
+            "finalizado": True,
+            "ronda": ronda
+        })
+    
+    if not encuentros_por_ronda:
+        st.info("No hay encuentros para mostrar en el diagrama.")
+        return
+    
+    # Ordenar rondas
+    rondas_ordenadas = sorted(encuentros_por_ronda.keys())
+    
+    # Crear columnas para cada ronda (de izquierda a derecha)
+    num_rondas = len(rondas_ordenadas)
+    columnas = st.columns(num_rondas)
+    
+    for idx, ronda in enumerate(rondas_ordenadas):
+        with columnas[idx]:
+            st.markdown(f"""
+            <div style="text-align:center; background-color:#333; padding:8px; border-radius:5px; margin-bottom:10px;">
+                <strong style="color:#FFD700; font-size:16px;">RONDA {ronda}</strong>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            encuentros_ronda = encuentros_por_ronda[ronda]
+            
+            # Si es la primera ronda, mostrar todos los competidores
+            if ronda == 1:
+                for e in encuentros_ronda:
+                    c1 = e.get("competidor_1", {})
+                    c2 = e.get("competidor_2", {})
+                    ganador = e.get("ganador", {})
+                    
+                    c1_nombre = c1.get("nombre", "?") if isinstance(c1, dict) else str(c1)
+                    c2_nombre = c2.get("nombre", "?") if isinstance(c2, dict) else str(c2) if c2 else "BYE"
+                    ganador_nombre = ganador.get("nombre", "") if isinstance(ganador, dict) else str(ganador) if ganador else ""
+                    
+                    # Determinar colores según si está finalizado
+                    if e.get("finalizado", False):
+                        bg_c1 = "#4CAF50" if c1_nombre == ganador_nombre else "#666"
+                        bg_c2 = "#4CAF50" if c2_nombre == ganador_nombre else "#666"
+                        bg_c1 = "#e53935" if c1_nombre != ganador_nombre and ganador_nombre else bg_c1
+                        bg_c2 = "#e53935" if c2_nombre != ganador_nombre and ganador_nombre else bg_c2
+                    else:
+                        bg_c1 = "#444"
+                        bg_c2 = "#444"
+                    
+                    st.markdown(f"""
+                    <div style="background-color:#222; padding:10px; border-radius:8px; margin:5px 0; border-left:3px solid {bg_c1};">
+                        <div style="color:white; font-size:13px; font-weight:bold;">
+                            {'🏆 ' if c1_nombre == ganador_nombre else ''}{c1_nombre}
+                        </div>
+                    </div>
+                    <div style="text-align:center; color:#999; font-size:11px; margin:2px 0;">VS</div>
+                    <div style="background-color:#222; padding:10px; border-radius:8px; margin:5px 0; border-left:3px solid {bg_c2};">
+                        <div style="color:white; font-size:13px; font-weight:bold;">
+                            {'🏆 ' if c2_nombre == ganador_nombre else ''}{c2_nombre}
+                        </div>
+                    </div>
+                    <div style="height:15px;"></div>
+                    """, unsafe_allow_html=True)
+            
+            # Para rondas posteriores, mostrar los ganadores que avanzan
+            else:
+                # Recopilar los ganadores de la ronda anterior
+                ronda_anterior = ronda - 1
+                
+                for e in encuentros_ronda:
+                    c1 = e.get("competidor_1", {})
+                    c2 = e.get("competidor_2", {})
+                    ganador = e.get("ganador", {})
+                    
+                    c1_nombre = c1.get("nombre", "Por definir") if isinstance(c1, dict) else str(c1) if c1 else "Por definir"
+                    c2_nombre = c2.get("nombre", "Por definir") if isinstance(c2, dict) else str(c2) if c2 else "Por definir"
+                    ganador_nombre = ganador.get("nombre", "") if isinstance(ganador, dict) else str(ganador) if ganador else ""
+                    
+                    if e.get("finalizado", False):
+                        bg_c1 = "#4CAF50" if c1_nombre == ganador_nombre else "#e53935"
+                        bg_c2 = "#4CAF50" if c2_nombre == ganador_nombre else "#e53935"
+                    else:
+                        bg_c1 = "#444"
+                        bg_c2 = "#444"
+                    
+                    st.markdown(f"""
+                    <div style="background-color:#222; padding:10px; border-radius:8px; margin:5px 0; border-left:3px solid {bg_c1};">
+                        <div style="color:white; font-size:14px; font-weight:bold;">
+                            {'🏆 ' if c1_nombre == ganador_nombre else ''}{c1_nombre}
+                        </div>
+                    </div>
+                    <div style="text-align:center; color:#999; font-size:11px; margin:2px 0;">VS</div>
+                    <div style="background-color:#222; padding:10px; border-radius:8px; margin:5px 0; border-left:3px solid {bg_c2};">
+                        <div style="color:white; font-size:14px; font-weight:bold;">
+                            {'🏆 ' if c2_nombre == ganador_nombre else ''}{c2_nombre}
+                        </div>
+                    </div>
+                    <div style="height:15px;"></div>
+                    """, unsafe_allow_html=True)
+    
+    # Leyenda
+    st.divider()
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown("🟢 **Verde** = Ganador/Avanza")
+    with col2:
+        st.markdown("🔴 **Rojo** = Eliminado")
+    with col3:
+        st.markdown("⚫ **Gris** = Por definir")
 
 
 def mostrar_finalizado(grafica):
