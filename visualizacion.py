@@ -322,47 +322,81 @@ def mostrar_finalizado(grafica):
     tercero_1 = ganadores.get("tercero_1", "")
     tercero_2 = ganadores.get("tercero_2", "")
     
+    # Mostrar debug para verificar datos
+    st.caption(f"Debug - 1°: {primer}, 2°: {segundo}, 3°_1: {tercero_1}, 3°_2: {tercero_2}")
+    
+    # PRIMER LUGAR - Centrado y grande
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
         if primer:
             st.markdown(f"""
-            <div style="background:linear-gradient(135deg, #FFD700, #FFA000); padding:30px; border-radius:15px; text-align:center;">
+            <div style="background:linear-gradient(135deg, #FFD700, #FFA000); padding:30px; border-radius:15px; text-align:center; margin-bottom:20px;">
                 <h1 style="color:white; margin:0; font-size:36px;">🥇 PRIMER LUGAR</h1>
                 <h2 style="color:white; margin:10px 0; font-size:48px;">{primer}</h2>
             </div>
             """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg, #FFD700, #FFA000); padding:30px; border-radius:15px; text-align:center; margin-bottom:20px;">
+                <h1 style="color:white; margin:0; font-size:36px;">🥇 PRIMER LUGAR</h1>
+                <h2 style="color:white; margin:10px 0; font-size:36px;">Por definir</h2>
+            </div>
+            """, unsafe_allow_html=True)
     
-    col1, col2, col3, col4 = st.columns(4)
+    # SEGUNDO Y TERCEROS - En fila
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Determinar cuántos terceros lugares hay
+    num_terceros = (1 if tercero_1 else 0) + (1 if tercero_2 else 0)
+    
+    if num_terceros == 2:
+        # 4 columnas: segundo, tercero_1, tercero_2, vacío
+        col1, col2, col3, col4 = st.columns(4)
+    elif num_terceros == 1:
+        # 3 columnas: segundo, tercero_1, vacío
+        col1, col2, col3 = st.columns(3)
+    else:
+        # 2 columnas: segundo, vacío
+        col1, col2 = st.columns(2)
     
     with col1:
         if segundo:
             st.markdown(f"""
             <div style="background:linear-gradient(135deg, #C0C0C0, #808080); padding:20px; border-radius:10px; text-align:center;">
-                <h3 style="color:white; margin:0;">🥈 SEGUNDO</h3>
-                <h4 style="color:white; margin:10px 0;">{segundo}</h4>
+                <h3 style="color:white; margin:0;">🥈 SEGUNDO LUGAR</h3>
+                <h4 style="color:white; margin:10px 0; font-size:28px;">{segundo}</h4>
             </div>
             """, unsafe_allow_html=True)
-    
-    with col2:
-        if tercero_1:
+        else:
             st.markdown(f"""
-            <div style="background:linear-gradient(135deg, #CD7F32, #8B4513); padding:20px; border-radius:10px; text-align:center;">
-                <h3 style="color:white; margin:0;">🥉 TERCERO</h3>
-                <h4 style="color:white; margin:10px 0;">{tercero_1}</h4>
+            <div style="background:linear-gradient(135deg, #C0C0C0, #808080); padding:20px; border-radius:10px; text-align:center;">
+                <h3 style="color:white; margin:0;">🥈 SEGUNDO LUGAR</h3>
+                <h4 style="color:white; margin:10px 0; font-size:24px;">Por definir</h4>
             </div>
             """, unsafe_allow_html=True)
     
-    with col3:
-        if tercero_2:
-            st.markdown(f"""
-            <div style="background:linear-gradient(135deg, #CD7F32, #8B4513); padding:20px; border-radius:10px; text-align:center;">
-                <h3 style="color:white; margin:0;">🥉 TERCERO</h3>
-                <h4 style="color:white; margin:10px 0;">{tercero_2}</h4>
-            </div>
-            """, unsafe_allow_html=True)
+    if num_terceros >= 1:
+        with col2:
+            if tercero_1:
+                st.markdown(f"""
+                <div style="background:linear-gradient(135deg, #CD7F32, #8B4513); padding:20px; border-radius:10px; text-align:center;">
+                    <h3 style="color:white; margin:0;">🥉 TERCER LUGAR</h3>
+                    <h4 style="color:white; margin:10px 0; font-size:28px;">{tercero_1}</h4>
+                </div>
+                """, unsafe_allow_html=True)
     
-    # Tabla de competidores ordenados por resultado
+    if num_terceros == 2:
+        with col3:
+            if tercero_2:
+                st.markdown(f"""
+                <div style="background:linear-gradient(135deg, #CD7F32, #8B4513); padding:20px; border-radius:10px; text-align:center;">
+                    <h3 style="color:white; margin:0;">🥉 TERCER LUGAR</h3>
+                    <h4 style="color:white; margin:10px 0; font-size:28px;">{tercero_2}</h4>
+                </div>
+                """, unsafe_allow_html=True)
+
+    # Tabla de clasificación final
     st.divider()
     st.subheader("📋 Clasificación Final")
     
@@ -375,9 +409,10 @@ def mostrar_finalizado(grafica):
         else:
             lista.sort(key=lambda x: (x.get("encuentros_ganados", 0), x.get("puntos_favor", 0)), reverse=True)
         
-        df_final = pd.DataFrame(lista)
-        df_final.index = range(1, len(df_final) + 1)
-        st.dataframe(df_final, use_container_width=True)
+        if lista:
+            df_final = pd.DataFrame(lista)
+            df_final.index = range(1, len(df_final) + 1)
+            st.dataframe(df_final, use_container_width=True)
     else:
         # Mostrar lista de competidores con su posición
         competidores_lista = []
@@ -393,13 +428,14 @@ def mostrar_finalizado(grafica):
                 posicion = "🥉 3°"
             
             competidores_lista.append({
-                "Posición": posicion,
+                "Posición": posicion if posicion else "-",
                 "Nombre": c["nombre"],
                 "Escuela": c["escuela"]
             })
         
-        df_competidores = pd.DataFrame(competidores_lista)
-        st.dataframe(df_competidores, use_container_width=True, hide_index=True)
+        if competidores_lista:
+            df_competidores = pd.DataFrame(competidores_lista)
+            st.dataframe(df_competidores, use_container_width=True, hide_index=True)
     
     # Historial de resultados
     if grafica["historial"]:
