@@ -141,18 +141,18 @@ def mostrar_detalle_grafica(grafica):
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric("📍 Área", grafica["area"])
+        st.metric("Área", grafica["area"])
     with col2:
         estatus_emoji = {
             "Pendiente": "⚪",
             "En desarrollo": "🟡",
             "Finalizado": "🔴"
         }
-        st.metric("📊 Estatus", f"{estatus_emoji.get(grafica['estatus'], '')} {grafica['estatus']}")
+        st.metric("Estatus", f"{estatus_emoji.get(grafica['estatus'], '')} {grafica['estatus']}")
     with col3:
-        st.metric("🥋 Modalidad", grafica["modalidad"])
+        st.metric("Modalidad", grafica["modalidad"])
     with col4:
-        st.metric("📋 Reglamento", grafica["reglamento"])
+        st.metric("Reglamento", grafica["reglamento"])
     
     # Información adicional
     st.caption(f"**Categoría:** {grafica['categoria_edad']} | **Sexo:** {grafica['sexo']} | **Tipo:** {grafica['tipo_competencia'].replace('_', ' ').title()}")
@@ -170,7 +170,7 @@ def mostrar_detalle_grafica(grafica):
 
 def mostrar_pendiente(grafica):
     """Muestra la información para gráficas pendientes"""
-    st.subheader("📋 Competidores Inscritos")
+    st.subheader("Competidores Inscritos")
     
     if grafica["competidores"]:
         df = pd.DataFrame(grafica["competidores"])
@@ -187,7 +187,7 @@ def mostrar_en_desarrollo(grafica):
     encuentro_actual, indice = obtener_encuentro_actual(grafica)
     
     if encuentro_actual:
-        st.subheader("⚡ ENCUENTRO EN CURSO")
+        st.subheader("ENCUENTRO EN CURSO")
         
         c1 = formatear_competidor(encuentro_actual["competidor_1"])
         c2 = formatear_competidor(encuentro_actual.get("competidor_2"))
@@ -234,7 +234,7 @@ def mostrar_en_desarrollo(grafica):
     # DIAGRAMA DE LLAVES (BRACKET)
     # =========================
     st.divider()
-    st.subheader("🏆 Diagrama de Competencia")
+    st.subheader("Diagrama de Competencia")
     
     if grafica["tipo_competencia"] == "Round Robin":
         st.info("El diagrama de llaves no está disponible para Round Robin. Todos compiten contra todos.")
@@ -245,7 +245,7 @@ def mostrar_en_desarrollo(grafica):
     # Tabla de resultados (solo si hay historial)
     if grafica["historial"]:
         st.divider()
-        st.subheader("📜 Resultados de Rondas Anteriores")
+        st.subheader("Resultados de Rondas Anteriores")
         
         resultados_df = []
         for r in grafica["historial"]:
@@ -355,13 +355,13 @@ def mostrar_bracket_eliminacion(grafica):
                     st.markdown(f"""
                     <div style="background-color:#222; padding:10px; border-radius:8px; margin:5px 0; border-left:3px solid {bg_c1};">
                         <div style="color:white; font-size:13px; font-weight:bold;">
-                            {'🏆 ' if c1_nombre == ganador_nombre else ''}{c1_nombre}
+                            {'' if c1_nombre == ganador_nombre else ''}{c1_nombre}
                         </div>
                     </div>
                     <div style="text-align:center; color:#999; font-size:11px; margin:2px 0;">VS</div>
                     <div style="background-color:#222; padding:10px; border-radius:8px; margin:5px 0; border-left:3px solid {bg_c2};">
                         <div style="color:white; font-size:13px; font-weight:bold;">
-                            {'🏆 ' if c2_nombre == ganador_nombre else ''}{c2_nombre}
+                            {'' if c2_nombre == ganador_nombre else ''}{c2_nombre}
                         </div>
                     </div>
                     <div style="height:15px;"></div>
@@ -391,13 +391,13 @@ def mostrar_bracket_eliminacion(grafica):
                     st.markdown(f"""
                     <div style="background-color:#222; padding:10px; border-radius:8px; margin:5px 0; border-left:3px solid {bg_c1};">
                         <div style="color:white; font-size:14px; font-weight:bold;">
-                            {'🏆 ' if c1_nombre == ganador_nombre else ''}{c1_nombre}
+                            {'' if c1_nombre == ganador_nombre else ''}{c1_nombre}
                         </div>
                     </div>
                     <div style="text-align:center; color:#999; font-size:11px; margin:2px 0;">VS</div>
                     <div style="background-color:#222; padding:10px; border-radius:8px; margin:5px 0; border-left:3px solid {bg_c2};">
                         <div style="color:white; font-size:14px; font-weight:bold;">
-                            {'🏆 ' if c2_nombre == ganador_nombre else ''}{c2_nombre}
+                            {'' if c2_nombre == ganador_nombre else ''}{c2_nombre}
                         </div>
                     </div>
                     <div style="height:15px;"></div>
@@ -418,7 +418,7 @@ def mostrar_finalizado(grafica):
     """Muestra la información para gráficas finalizadas"""
     
     # Podio de ganadores
-    st.subheader("🏆 PODIO DE GANADORES")
+    st.subheader("PODIO DE GANADORES")
     
     ganadores = grafica["ganadores"]
     primer = ganadores.get("primer_lugar", "")
@@ -502,7 +502,7 @@ def mostrar_finalizado(grafica):
 
     # Tabla de clasificación final
     st.divider()
-    st.subheader("📋 Clasificación Final")
+    st.subheader("Clasificación Final")
     
     if grafica["tipo_competencia"] == "Round Robin" and grafica.get("resultados_round_robin"):
         resultados = grafica["resultados_round_robin"]
@@ -544,7 +544,7 @@ def mostrar_finalizado(grafica):
     # Historial de resultados
     if grafica["historial"]:
         st.divider()
-        st.subheader("📜 Historial de Encuentros")
+        st.subheader("Historial de Encuentros")
         
         historial_df = []
         for r in grafica["historial"]:
@@ -575,14 +575,14 @@ def mostrar_finalizado(grafica):
 # INTERFAZ PRINCIPAL
 # =========================
 
-st.title("🏆 Torneo de Karate - Visualización en Vivo")
+st.title("Copa Okinawa - Visualización en Vivo")
 
 # Cargar datos
 datos = cargar_graficas()
 graficas = [convertir_fila_a_grafica(fila) for fila in datos]
 
 if not graficas:
-    st.info("📋 No hay gráficas registradas en el torneo.")
+    st.info("Aun no hay gráficas registradas en el torneo.")
     st.stop()
 
 # =========================
@@ -594,20 +594,20 @@ col1, col2, col3 = st.columns(3)
 with col1:
     areas_disponibles = list(set(g["area"] for g in graficas))
     area_filtro = st.selectbox(
-        "📍 Filtrar por Área",
+        "Filtrar por Área",
         ["Todas"] + sorted(areas_disponibles)
     )
 
 with col2:
     estatus_filtro = st.selectbox(
-        "📊 Filtrar por Estatus",
+        "Filtrar por Estatus",
         ["Todos", "Pendiente", "En desarrollo", "Finalizado"]
     )
 
 with col3:
     modalidades = list(set(g["modalidad"] for g in graficas))
     modalidad_filtro = st.selectbox(
-        "🥋 Filtrar por Modalidad",
+        "Filtrar por Modalidad",
         ["Todas"] + sorted(modalidades)
     )
 
@@ -648,4 +648,4 @@ else:
 # =========================
 
 st.divider()
-st.caption("🔄 Esta página se actualiza automáticamente cada 5 segundos")
+st.caption("Esta página se actualiza automáticamente cada 5 segundos")
