@@ -358,7 +358,7 @@ def mostrar_bracket_eliminacion(grafica):
             
             Se está realizando un encuentro preliminar para igualar el número de competidores.
             
-            **{c1_nombre}** "vs" **{c2_nombre}**
+            **{c1_nombre}** ▌ **{c2_nombre}**
             
             El ganador se integrará a la primera ronda. El diagrama de llaves se mostrará cuando inicien las rondas normales.
             """)
@@ -474,7 +474,7 @@ def mostrar_bracket_eliminacion(grafica):
                         {emoji_c1}{c1_nombre[:25]}
                     </div>
                 </div>
-                <div style="text-align:center; color:#666; font-size:10px; margin:1px 0;">"vs"</div>
+                <div style="text-align:center; color:#666; font-size:10px; margin:1px 0;"> ▌ </div>
                 <div style="background-color:#1a1a2e; padding:12px; border-radius:8px; margin:3px 0; border-left:4px solid {bg_c2}; border-right:1px solid #333;">
                     <div style="color:white; font-size:13px; font-weight:bold;">
                         {emoji_c2}{c2_nombre[:25]}
