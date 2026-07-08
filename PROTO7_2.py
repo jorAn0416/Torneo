@@ -17,7 +17,7 @@ if "graficas" not in st.session_state:
 if "competidores_temp" not in st.session_state:
     st.session_state.competidores_temp = []
     
-# =========================determinar_ganadores_round_robin  
+# =========================   
 # BASE DE DATOS SUPABASE
 # =========================
 
@@ -258,14 +258,18 @@ def obtener_escuela(grafica, nombre_competidor):
     return "Sin escuela registrada"
 
 
-def crear_encuentros(competidores, hacer_preliminar=True, evitar_misma_escuela=True):
+def crear_encuentros(competidores, hacer_preliminar=True, evitar_misma_escuela=True, competidores_con_preliminar=None):
     """
     Crea encuentros para una ronda.
     Si hacer_preliminar es True y hay número impar, 
     crea un encuentro preliminar y el resto espera.
     Si evitar_misma_escuela es True, intenta no emparejar 
     competidores de la misma escuela.
+    competidores_con_preliminar: lista de nombres que ya tuvieron preliminar (tienen prioridad para pasar)
     """
+    if competidores_con_preliminar is None:
+        competidores_con_preliminar = []
+    
     lista = competidores.copy()
     random.shuffle(lista)
     
@@ -276,28 +280,45 @@ def crear_encuentros(competidores, hacer_preliminar=True, evitar_misma_escuela=T
     # SI HAY PRELIMINAR (número impar de competidores)
     # -----------------------------
     if hacer_preliminar and len(lista) % 2 == 1:
-        # Buscar dos competidores de DIFERENTE escuela para el preliminar
+        # Separar competidores que ya tuvieron preliminar
+        con_preliminar = [c for c in lista if c["nombre"] in competidores_con_preliminar]
+        sin_preliminar = [c for c in lista if c["nombre"] not in competidores_con_preliminar]
+        
+        # Los que ya tuvieron preliminar PASAN DIRECTO (van a esperan)
+        esperan = con_preliminar.copy()
+        
+        # De los que NO han tenido preliminar, seleccionar 2 para el preliminar
+        lista_sin_preliminar = sin_preliminar.copy()
+        
         c1 = None
         c2 = None
         
-        if evitar_misma_escuela:
+        if len(lista_sin_preliminar) >= 2:
             # Intentar encontrar dos de diferente escuela
-            for i in range(len(lista)):
-                for j in range(i + 1, len(lista)):
-                    if lista[i]["escuela"] != lista[j]["escuela"]:
-                        c1 = lista.pop(j)  # Primero el de mayor índice
-                        c2 = lista.pop(i)  # Luego el de menor índice
+            if evitar_misma_escuela:
+                for i in range(len(lista_sin_preliminar)):
+                    for j in range(i + 1, len(lista_sin_preliminar)):
+                        if lista_sin_preliminar[i]["escuela"] != lista_sin_preliminar[j]["escuela"]:
+                            c1 = lista_sin_preliminar.pop(j)
+                            c2 = lista_sin_preliminar.pop(i)
+                            break
+                    if c1 and c2:
                         break
-                if c1 and c2:
-                    break
-        
-        # Si no se encontró pareja de diferente escuela, tomar los dos primeros
-        if not c1 or not c2:
+            
+            # Si no se encontró pareja de diferente escuela, tomar los dos primeros
+            if not c1 or not c2:
+                c1 = lista_sin_preliminar.pop(0)
+                c2 = lista_sin_preliminar.pop(0)
+            
+            # Los que quedan sin preliminar también pasan a esperar
+            esperan.extend(lista_sin_preliminar)
+        else:
+            # Si solo hay 1 o 0 sin preliminar, todos pasan directo (no debería pasar)
+            # pero por si acaso, tomamos los dos primeros de la lista original
+            esperan = []
             c1 = lista.pop(0)
             c2 = lista.pop(0)
-        
-        # Los demás ESPERAN a que termine el preliminar
-        esperan = lista.copy()
+            esperan = lista.copy()
         
         # Creamos el encuentro preliminar
         encuentros.append({
@@ -312,7 +333,6 @@ def crear_encuentros(competidores, hacer_preliminar=True, evitar_misma_escuela=T
             "finalizado": False
         })
         
-        # Retornamos solo el encuentro preliminar y los que esperan
         return encuentros, esperan
     
     # -----------------------------
@@ -323,18 +343,15 @@ def crear_encuentros(competidores, hacer_preliminar=True, evitar_misma_escuela=T
         c2 = None
         
         if evitar_misma_escuela:
-            # Buscar un oponente de diferente escuela
             for i, competidor in enumerate(lista):
                 if competidor["escuela"] != c1["escuela"]:
                     c2 = lista.pop(i)
                     break
         
-        # Si no se encontró oponente de diferente escuela, tomar el primero
         if not c2:
             if lista:
                 c2 = lista.pop(0)
             else:
-                # Si no hay más competidores, c1 pasa solo
                 encuentros.append({
                     "tipo": "normal",
                     "ronda": 1,
@@ -360,7 +377,6 @@ def crear_encuentros(competidores, hacer_preliminar=True, evitar_misma_escuela=T
             "finalizado": False
         })
     
-    # Si queda uno solo al final
     if len(lista) == 1:
         encuentros.append({
             "tipo": "normal",
@@ -456,7 +472,22 @@ def avanzar_ronda_si_corresponde(grafica):
     
     # Añadir los que estaban esperando
     ganadores.extend(grafica.get("esperan", []))
+    
+    # ACTUALIZAR historial de preliminares
+    competidores_con_preliminar = grafica.get("competidores_con_preliminar", [])
+    
+    # Si hubo ronda preliminar (ronda 0), agregar los participantes
+    for e in encuentros:
+        if e.get("ronda") == 0 or e.get("tipo") == "preliminar":
+            c1_nombre = e["competidor_1"]["nombre"] if isinstance(e["competidor_1"], dict) else e["competidor_1"]
+            c2_nombre = e["competidor_2"]["nombre"] if isinstance(e["competidor_2"], dict) else e["competidor_2"]
+            if c1_nombre not in competidores_con_preliminar:
+                competidores_con_preliminar.append(c1_nombre)
+            if c2_nombre not in competidores_con_preliminar:
+                competidores_con_preliminar.append(c2_nombre)
+    
     grafica["esperan"] = []
+    grafica["competidores_con_preliminar"] = competidores_con_preliminar
     
     # Si ya solo queda un ganador, terminó la gráfica
     if len(ganadores) == 1:
@@ -485,16 +516,14 @@ def avanzar_ronda_si_corresponde(grafica):
     
     grafica["ronda_actual"] += 1
     
-    # Crear nuevos encuentros con la posibilidad de preliminar
-    # RONDAS POSTERIORES: NO evitar misma escuela
+    # Crear nuevos encuentros pasando el historial de preliminares
     nuevos_encuentros, nuevos_esperan = crear_encuentros(
         ganadores,
         hacer_preliminar=hacer_preliminar,
-        evitar_misma_escuela=False  # ← Solo primera ronda evita misma escuela
-        
+        evitar_misma_escuela=False,
+        competidores_con_preliminar=competidores_con_preliminar  # ← PASAR HISTORIAL
     )
     
-    # Actualizar el número de ronda en los nuevos encuentros
     for encuentro in nuevos_encuentros:
         if encuentro["tipo"] == "normal":
             encuentro["ronda"] = grafica["ronda_actual"]
@@ -1249,7 +1278,7 @@ elif rol == "Resultados Finales":
 
     st.subheader(
         "Ranking de Escuelas"
-    )
+    ) 
 
     ranking = pd.DataFrame(
         escuelas.data
