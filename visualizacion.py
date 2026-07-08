@@ -354,11 +354,11 @@ def mostrar_bracket_eliminacion(grafica):
             c2_nombre = c2.get("nombre", "?") if isinstance(c2, dict) else str(c2) if c2 else "?"
             
             st.warning(f"""
-             **RONDA PRELIMINAR EN CURSO**
+            **RONDA PRELIMINAR EN CURSO** 
             
             Se está realizando un encuentro preliminar para igualar el número de competidores.
             
-            **{c1_nombre}** 🆚 **{c2_nombre}**
+            **{c1_nombre}** "vs" **{c2_nombre}**
             
             El ganador se integrará a la primera ronda. El diagrama de llaves se mostrará cuando inicien las rondas normales.
             """)
@@ -406,10 +406,24 @@ def mostrar_bracket_eliminacion(grafica):
     
     for idx, ronda in enumerate(rondas_ordenadas):
         with columnas[idx]:
-            # Determinar nombre de la ronda
-            if ronda == rondas_ordenadas[-1] and len(encuentros_por_ronda[ronda]) == 1:
+            # Determinar nombre de la ronda de forma segura
+            es_ultima_ronda = (idx == num_rondas - 1)
+            es_penultima_ronda = (idx == num_rondas - 2)
+            
+            # Determinar si esta ronda es la final (última ronda con 1 solo encuentro)
+            es_final = es_ultima_ronda and len(encuentros_por_ronda[ronda]) == 1
+            
+            # Determinar si esta ronda es semifinal (penúltima cuando la última tiene 1 encuentro)
+            if es_penultima_ronda and num_rondas >= 2:
+                ultima_ronda_key = rondas_ordenadas[-1]
+                es_semifinal = len(encuentros_por_ronda.get(ultima_ronda_key, [])) == 1
+            else:
+                es_semifinal = False
+            
+            # Asignar nombre
+            if es_final:
                 nombre_ronda = "FINAL"
-            elif ronda == rondas_ordenadas[-2] and len(encuentros_por_ronda.get(rondas_ordenadas[-1], [])) == 1:
+            elif es_semifinal:
                 nombre_ronda = "SEMIFINAL"
             else:
                 nombre_ronda = f"RONDA {ronda}"
@@ -446,8 +460,8 @@ def mostrar_bracket_eliminacion(grafica):
                     bg_c2 = "#444"
                 
                 # Emoji para ganador
-                emoji_c1 = " " if c1_nombre == ganador_nombre and ganador_nombre else ""
-                emoji_c2 = " " if c2_nombre == ganador_nombre and ganador_nombre else ""
+                emoji_c1 = "" if c1_nombre == ganador_nombre and ganador_nombre else ""
+                emoji_c2 = "" if c2_nombre == ganador_nombre and ganador_nombre else ""
                 
                 # Si es BYE
                 if c2_nombre == "BYE" and not e.get("finalizado", False):
@@ -460,7 +474,7 @@ def mostrar_bracket_eliminacion(grafica):
                         {emoji_c1}{c1_nombre[:25]}
                     </div>
                 </div>
-                <div style="text-align:center; color:#666; font-size:10px; margin:1px 0;">🆚</div>
+                <div style="text-align:center; color:#666; font-size:10px; margin:1px 0;">"vs"</div>
                 <div style="background-color:#1a1a2e; padding:12px; border-radius:8px; margin:3px 0; border-left:4px solid {bg_c2}; border-right:1px solid #333;">
                     <div style="color:white; font-size:13px; font-weight:bold;">
                         {emoji_c2}{c2_nombre[:25]}
