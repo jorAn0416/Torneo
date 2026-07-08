@@ -416,6 +416,7 @@ def crear_grafica(nombre_grafica, reglamento, modalidad, categoria_edad, sexo, a
         "encuentros": encuentros,
         "esperan": esperan,
         "historial": [],
+        "competidores_con_preliminar": [],
         "resultados_round_robin": {},  # ← NUEVO
         "ganadores": {
             "primer_lugar": "",
